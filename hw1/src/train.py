@@ -21,13 +21,14 @@ def plot():
     plt.plot(train_loss, label='train')
     plt.plot(valid_loss, label='valid')
     plt.legend()
+    plt.savefig('../model/loss.png')
 
     plt.figure(figsize=(7, 5))
     plt.title('F1 Score')
     plt.plot(train_f1, label='train')
     plt.plot(valid_f1, label='valid')
     plt.legend()
-    plt.savefig('../model/learning_curve.png')
+    plt.savefig('../model/f1_score.png')
 
     print('Best F1 score ', max([[l['f1'], idx] for idx, l in enumerate(history['valid'])]))
 
