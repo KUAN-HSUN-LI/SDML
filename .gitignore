@@ -5,3 +5,14 @@
 .idea/misc.xml
 .idea/modules.xml
 .idea/SDML.iml
+hw1/dataset/validset.csv
+hw1/dataset/validData.pkl
+hw1/dataset/trainset.csv
+hw1/dataset/trainData.pkl
+hw1/dataset/testset.csv
+hw1/dataset/testData.pkl
+hw1/dataset/embedding.pkl
+hw1/dataset/dictionary.pkl
+hw1/Bert-Multi-Label-Text-Classification-master/pybert/pretrain/bert/base-uncased/pytorch_model.bin
+hw1/Bert-Multi-Label-Text-Classification-master/pybert/dataset/test.csv
+hw1/Bert-Multi-Label-Text-Classification-master/pybert/dataset/train.csv
