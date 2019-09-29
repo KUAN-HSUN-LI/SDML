@@ -57,7 +57,7 @@ class TaskData(object):
             save_pickle(data = valid,file_path=valid_path)
         return train, valid
 
-    def read_data(self,raw_data_path,preprocessor = None,is_train=True):
+    def read_data(self, raw_data_path, preprocessor=None, is_train=True):
         '''
         :param raw_data_path:
         :param skip_header:
@@ -70,7 +70,8 @@ class TaskData(object):
             if is_train:
                 target = row[2:]
             else:
-                target = [-1,-1,-1,-1,-1,-1]
+                # target = [-1,-1,-1,-1,-1,-1]
+                target = [-1, -1, -1, -1]
             sentence = str(row[1])
             if preprocessor:
                 sentence = preprocessor(sentence)

@@ -178,7 +178,7 @@ class F1Score(Metric):
         >>>         metric(logits,target)
         >>>         print(metric.name(),metric.value())
     '''
-    def __init__(self,thresh = 0.5, normalizate = True,task_type = 'binary',average = 'binary',search_thresh = False):
+    def __init__(self,thresh = 0.5, normalizate = True,task_type = 'binary',average = 'micro',search_thresh = False):
         super(F1Score).__init__()
         assert task_type in ['binary','multiclass']
         assert average in ['binary','micro', 'macro', 'samples', 'weighted']

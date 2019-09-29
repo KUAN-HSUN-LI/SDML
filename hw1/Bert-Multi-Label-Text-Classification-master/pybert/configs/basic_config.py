@@ -2,10 +2,12 @@
 from pathlib import Path
 BASE_DIR = Path('pybert')
 config = {
-    'raw_data_path': BASE_DIR / 'dataset/train.csv',
-    'test_path': BASE_DIR / 'dataset/test.csv',
+    # 'raw_data_path': BASE_DIR / 'dataset/train.csv',
+    # 'test_path': BASE_DIR / 'dataset/test.csv',
+    'raw_data_path': BASE_DIR / 'sdml/sdml_train.csv',
+    'test_path': BASE_DIR / 'sdml/sdml_test.csv',
 
-    'data_dir': BASE_DIR / 'dataset',
+    'data_dir': BASE_DIR / 'sdml',
     'log_dir': BASE_DIR / 'output/log',
     'writer_dir': BASE_DIR / "output/TSboard",
     'figure_dir': BASE_DIR / "output/figure",

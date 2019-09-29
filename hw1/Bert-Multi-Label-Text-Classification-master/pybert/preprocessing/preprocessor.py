@@ -210,6 +210,7 @@ class EnglishPreProcessor(object):
 
     # 主函数
     def __call__(self, sentence):
+        sentence = sentence.replace("$$$", " ")        # sdml
         x = sentence
         # x = self.lower(x)
         x = self.replace(x)

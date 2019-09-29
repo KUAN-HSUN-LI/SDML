@@ -54,7 +54,8 @@ class BertProcessor(object):
 
     def get_labels(self):
         """Gets the list of labels for this data set."""
-        return ["toxic","severe_toxic","obscene","threat","insult","identity_hate"]
+        # return ["toxic","severe_toxic","obscene","threat","insult","identity_hate"]
+        return ["THEORETICAL", "ENGINEERING", "EMPIRICAL", "OTHERS"]
 
     @classmethod
     def read_data(cls, input_file,quotechar = None):

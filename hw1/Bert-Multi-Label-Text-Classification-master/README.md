@@ -1,5 +1,24 @@
 ## Bert multi-label text classification by PyTorch
 
+###  For SDML:
+`cd Bert-Multi-Label-Text_classification-master`
+1. make csv for bert:
+`python sdml2bert_csv.py`
+2. preprocess data:
+`python run_bert.py --do_data`
+3. Fine tuning bert model:
+`python run_bert.py --do_train --save_best --do_lower_case`
+4. Predict new data:
+`python run_bert.py --do_test --do_lower_case`
+5. Get submission CSV:
+`python bert2sdml_csv.py`
+
+ref:
+https://github.com/lonePatient/Bert-Multi-Label-Text-Classification
+
+
+
+
 This repo contains a PyTorch implementation of the pretrained BERT and XLNET model for multi-label text classification.
 
 ###  Structure of the code

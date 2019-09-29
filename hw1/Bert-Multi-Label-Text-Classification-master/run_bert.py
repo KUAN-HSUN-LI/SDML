@@ -13,7 +13,7 @@ from pybert.model.nn.bert_for_multi_label import BertForMultiLable
 from pybert.preprocessing.preprocessor import EnglishPreProcessor
 from pybert.callback.modelcheckpoint import ModelCheckpoint
 from pybert.callback.trainingmonitor import TrainingMonitor
-from pybert.train.metrics import AUC, AccuracyThresh, MultiLabelReport
+from pybert.train.metrics import AUC, AccuracyThresh, MultiLabelReport, F1Score
 from pytorch_transformers import AdamW, WarmupLinearSchedule
 from torch.utils.data import RandomSampler, SequentialSampler
 
@@ -118,9 +118,11 @@ def run_train(args):
                       grad_clip=args.grad_clip,
                       model_checkpoint=model_checkpoint,
                       gradient_accumulation_steps=args.gradient_accumulation_steps,
-                      batch_metrics=[AccuracyThresh(thresh=0.5)],
+                      batch_metrics=[AccuracyThresh(thresh=0.5),
+                                     F1Score()],
                       epoch_metrics=[AUC(average='micro', task_type='binary'),
-                                     MultiLabelReport(id2label=id2label)])
+                                     MultiLabelReport(id2label=id2label),
+                                     F1Score()])
     trainer.train(train_data=train_dataloader, valid_data=valid_dataloader, seed=args.seed)
 
 
@@ -150,7 +152,9 @@ def run_test(args):
     test_dataset = processor.create_dataset(test_features)
     test_sampler = SequentialSampler(test_dataset)
     test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=args.train_batch_size)
-    model = BertForMultiLable.from_pretrained(config['checkpoint_dir'], num_labels=len(label_list))
+    model = BertForMultiLable.from_pretrained(config['checkpoint_dir']
+                                              # / 'checkpoint-epoch-6'
+                                              , num_labels=len(label_list))
 
     # ----------- predicting
     logger.info('model predicting....')
@@ -160,16 +164,22 @@ def run_test(args):
     result = predictor.predict(data=test_dataloader)
     print(result)
 
+    import pickle
+    with open('./pybert/sdml/test_prob_raw.pkl', 'wb') as f:
+        pickle.dump(result, f)
+
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("--arch", default='bert', type=str)
+    # parser.add_argument("--arch", default='bert', type=str)
+    parser.add_argument("--arch", default='sdml', type=str)
     parser.add_argument("--do_data", action='store_true')
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_test", action='store_true')
     parser.add_argument("--save_best", action='store_true')
     parser.add_argument("--do_lower_case", action='store_true')
-    parser.add_argument('--data_name', default='kaggle', type=str)
+    # parser.add_argument('--data_name', default='kaggle', type=str)
+    parser.add_argument('--data_name', default='sdml', type=str)
     parser.add_argument("--epochs", default=6, type=int)
     parser.add_argument("--resume_path", default='', type=str)
     parser.add_argument("--mode", default='min', type=str)
