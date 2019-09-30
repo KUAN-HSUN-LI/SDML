@@ -30,7 +30,7 @@ class Trainer:
                                 batch_size=32,
                                 shuffle=shuffle,
                                 collate_fn=dataset.collate_fn,
-                                num_workers=4)
+                                num_workers=1)
 
         trange = tqdm(enumerate(dataloader), total=len(dataloader), desc=description)
         loss = 0

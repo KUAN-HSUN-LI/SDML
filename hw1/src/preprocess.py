@@ -37,14 +37,16 @@ def main():
     preprocessor = Preprocessor()
     words = set()
     words |= preprocessor.collect_words('../dataset/trainset.csv')
-    PAD_TOKEN = 0
-    UNK_TOKEN = 1
-    word_dict = {'<pad>': PAD_TOKEN, '<unk>': UNK_TOKEN}
-    for word in words:
-        word_dict[word] = len(word_dict)
+    # PAD_TOKEN = 0
+    # UNK_TOKEN = 1
+    # word_dict = {'<pad>': PAD_TOKEN, '<unk>': UNK_TOKEN}
+    # for word in words:
+    #     word_dict[word] = len(word_dict)
 
     print('[Info] Load embedding...')
     embedder = Embedding('../data/glove.6B.300d.txt', words)
+
+    PAD_TOKEN = embedder.to_index('<pad>')
 
     print('[INFO] Make dataset...')
     train = preprocessor.get_dataset('../dataset/trainset.csv', embedder, pad_idx=PAD_TOKEN, n_workers=4)

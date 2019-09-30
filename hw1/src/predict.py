@@ -42,17 +42,17 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = SimpleNet(embedder.get_dim())
-    model.load_state_dict(torch.load('../model/model.pkl.{}'.format(22)))
+    model.load_state_dict(torch.load('../model/model.pkl.{}'.format(16)))
     model.train(False)
     model.to(device)
     embedding = nn.Embedding(embedder.get_vocabulary_size(), embedder.get_dim())
     embedding.weight = torch.nn.Parameter(embedder.vectors)
 
     dataloader = DataLoader(dataset=testData,
-                            batch_size=128,
+                            batch_size=64,
                             shuffle=False,
                             collate_fn=testData.collate_fn,
-                            num_workers=2)
+                            num_workers=1)
     trange = tqdm(enumerate(dataloader), total=len(dataloader), desc='Predict')
     prediction = []
     for i, (x, y, _l) in trange:
