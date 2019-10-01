@@ -27,7 +27,7 @@ class Trainer:
             dataset = self.validData
             shuffle = False
         dataloader = DataLoader(dataset=dataset,
-                                batch_size=32,
+                                batch_size=16,
                                 shuffle=shuffle,
                                 collate_fn=dataset.collate_fn,
                                 num_workers=1)
@@ -60,9 +60,9 @@ class Trainer:
         l_loss = self.criteria(o_labels, labels)
         return o_labels, l_loss
 
-    def save(self, epoch):
-        if not os.path.exists('../model/'):
-            os.makedirs('../model/')
-        torch.save(self.model.state_dict(), '../model/model.pkl.' + str(epoch))
-        with open('../model/history.json', 'w') as f:
+    def save(self, epoch, dir):
+        if not os.path.exists('../%s/' % dir):
+            os.makedirs('../%s/' % dir)
+        torch.save(self.model.state_dict(), '../%s/model.pkl.' % dir + str(epoch))
+        with open('../%s/history.json' % dir, 'w') as f:
             json.dump(self.history, f, indent=4)

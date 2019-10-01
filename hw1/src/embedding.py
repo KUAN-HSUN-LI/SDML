@@ -1,7 +1,6 @@
 import re
 import torch
 
-
 class Embedding:
     """
     Args:
@@ -17,8 +16,7 @@ class Embedding:
         rand_seed (int): Random seed for embedding initialization.
     """
 
-    def __init__(self, embedding_path,
-                 words=None, oov_as_unk=True, lower=True, rand_seed=524):
+    def __init__(self, embedding_path, words, oov_as_unk, lower=True, rand_seed=524):
         self.word_dict = {}
         self.vectors = None
         self.lower = lower
@@ -105,7 +103,6 @@ class Embedding:
             words = set(words)
 
         vectors = []
-
         with open(embedding_path, encoding='utf8') as fp:
 
             row1 = fp.readline()

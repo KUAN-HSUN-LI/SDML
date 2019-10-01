@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 import pickle
 import os
-from sklearn.utils import shuffle
+import argparse
 from sklearn.model_selection import train_test_split
 
 from preprocessor import Preprocessor
@@ -19,6 +19,15 @@ def remove_info(dataset):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--oov_as_unk', action='store_true')
+    args = parser.parse_args()
+
+    if args.oov_as_unk:
+        oov_as_unk = True
+    else:
+        oov_as_unk = False
+
     print('[Info] Process csv...')
     # for train and valid csv
     trainset = pd.read_csv('../data/task2_trainset.csv', dtype=str)
@@ -37,14 +46,9 @@ def main():
     preprocessor = Preprocessor()
     words = set()
     words |= preprocessor.collect_words('../dataset/trainset.csv')
-    # PAD_TOKEN = 0
-    # UNK_TOKEN = 1
-    # word_dict = {'<pad>': PAD_TOKEN, '<unk>': UNK_TOKEN}
-    # for word in words:
-    #     word_dict[word] = len(word_dict)
-
     print('[Info] Load embedding...')
-    embedder = Embedding('../data/glove.6B.300d.txt', words)
+    embedder = Embedding('../data/glove.6B.300d.txt', words, oov_as_unk=oov_as_unk)
+    print('[Embedding Voc Size]: %d (oov_as_unk: %r)' % (embedder.get_vocabulary_size(), oov_as_unk))
 
     PAD_TOKEN = embedder.to_index('<pad>')
 
@@ -56,8 +60,6 @@ def main():
     print('[INFO] Save pickles...')
     with open('../dataset/embedding.pkl', 'wb') as f:
         pickle.dump(embedder, f)
-    with open('../dataset/dictionary.pkl', 'wb') as f:
-        pickle.dump(word_dict, f)
     with open('../dataset/trainData.pkl', 'wb') as f:
         pickle.dump(train, f)
     with open('../dataset/validData.pkl', 'wb') as f:
