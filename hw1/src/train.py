@@ -9,7 +9,7 @@ import argparse
 
 
 def plot(dir):
-    with open('../%s/history.json' % dir, 'r') as f:
+    with open('../model/%s/history.json' % dir, 'r') as f:
         history = json.loads(f.read())
 
     train_loss = [l['loss'] for l in history['train']]
@@ -22,14 +22,14 @@ def plot(dir):
     plt.plot(train_loss, label='train')
     plt.plot(valid_loss, label='valid')
     plt.legend()
-    plt.savefig('../%s/loss.png' % dir)
+    plt.savefig('../model/%s/loss.png' % dir)
 
     plt.figure(figsize=(7, 5))
     plt.title('F1 Score')
     plt.plot(train_f1, label='train')
     plt.plot(valid_f1, label='valid')
     plt.legend()
-    plt.savefig('../%s/f1_score.png' % dir)
+    plt.savefig('../model/%s/f1_score.png' % dir)
 
     print('Best F1 score ', max([[l['f1'], idx] for idx, l in enumerate(history['valid'])]))
 
@@ -48,21 +48,18 @@ def main():
         validData = pickle.load(f)
 
     device = torch.device('cuda:%s' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = SimpleNet(embedder.get_dim())
-    opt = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
+    model = SimpleNet(embedder)
+    opt = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-6)
     criteria = torch.nn.BCELoss()
     model.to(device)
     max_epoch = 25
     history = {'train': [], 'valid': []}
 
-    embedding = nn.Embedding(embedder.get_vocabulary_size(), embedder.get_dim())
-    embedding.weight = torch.nn.Parameter(embedder.vectors)
-
     trainer = Trainer(trainData, validData, device, model, opt, criteria, history)
     for epoch in range(max_epoch):
         print('Epoch: {}'.format(epoch))
-        trainer.run_epoch(epoch, embedding, True)
-        trainer.run_epoch(epoch, embedding, False)
+        trainer.run_epoch(epoch, True)
+        trainer.run_epoch(epoch, False)
         trainer.save(epoch, args.save_dir_name)
     plot(args.save_dir_name)
 

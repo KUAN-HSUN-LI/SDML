@@ -46,6 +46,8 @@ def main():
     preprocessor = Preprocessor()
     words = set()
     words |= preprocessor.collect_words('../dataset/trainset.csv')
+    words |= preprocessor.collect_words('../dataset/validset.csv')
+    words |= preprocessor.collect_words('../dataset/testset.csv')
     print('[Info] Load embedding...')
     embedder = Embedding('../data/glove.6B.300d.txt', words, oov_as_unk=oov_as_unk)
     print('[Embedding Voc Size]: %d (oov_as_unk: %r)' % (embedder.get_vocabulary_size(), oov_as_unk))

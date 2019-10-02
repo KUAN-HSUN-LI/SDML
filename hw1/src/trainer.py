@@ -16,7 +16,11 @@ class Trainer:
         self.criteria = criteria
         self.history = history
 
-    def run_epoch(self, epoch, embedding, training):
+    def run_epoch(self, epoch, training):
+
+        if epoch >= 3:
+            self.model.embedding.weight.requires_grad = False
+
         self.model.train(training)
         if training:
             description = 'Train'
@@ -36,7 +40,6 @@ class Trainer:
         loss = 0
         f1_score = F1()
         for i, (x, y, sent_len) in trange:
-            x = embedding(x)
             o_labels, batch_loss = self._run_iter(x, y)
             if training:
                 self.opt.zero_grad()
@@ -61,8 +64,8 @@ class Trainer:
         return o_labels, l_loss
 
     def save(self, epoch, dir):
-        if not os.path.exists('../%s/' % dir):
-            os.makedirs('../%s/' % dir)
-        torch.save(self.model.state_dict(), '../%s/model.pkl.' % dir + str(epoch))
-        with open('../%s/history.json' % dir, 'w') as f:
+        if not os.path.exists('../model/%s/' % dir):
+            os.makedirs('../model/%s/' % dir)
+        torch.save(self.model.state_dict(), '../model/%s/model.pkl.%d' % (dir, epoch))
+        with open('../model/%s/history.json' % dir, 'w') as f:
             json.dump(self.history, f, indent=4)
