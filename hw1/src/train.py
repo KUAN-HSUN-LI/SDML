@@ -49,7 +49,7 @@ def main():
 
     device = torch.device('cuda:%s' % args.cuda if torch.cuda.is_available() else 'cpu')
     model = SimpleNet(embedder)
-    opt = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-6)
+    opt = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1.0e-4)
     criteria = torch.nn.BCELoss()
     model.to(device)
     max_epoch = 25

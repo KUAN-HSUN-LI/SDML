@@ -18,7 +18,7 @@ class Trainer:
 
     def run_epoch(self, epoch, training):
 
-        if epoch >= 3:
+        if epoch >= 5:
             self.model.embedding.weight.requires_grad = False
 
         self.model.train(training)
