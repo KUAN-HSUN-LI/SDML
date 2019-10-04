@@ -39,7 +39,8 @@ class BertProcessor(object):
     """Base class for data converters for sequence classification data sets."""
 
     def __init__(self,vocab_path,do_lower_case):
-        self.tokenizer = BertTokenizer(vocab_path,do_lower_case)
+        # self.tokenizer = BertTokenizer(vocab_path,do_lower_case)
+        self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased')
 
     def get_train(self, data_file):
         """Gets a collection of `InputExample`s for the train set."""

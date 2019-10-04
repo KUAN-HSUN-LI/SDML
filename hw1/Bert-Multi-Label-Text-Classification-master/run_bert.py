@@ -67,7 +67,8 @@ def run_train(args):
         args.resume_path = Path(args.resume_path)
         model = BertForMultiLable.from_pretrained(args.resume_path, num_labels=len(label_list))
     else:
-        model = BertForMultiLable.from_pretrained(config['bert_model_dir'], num_labels=len(label_list))
+        # model = BertForMultiLable.from_pretrained(config['bert_model_dir'], num_labels=len(label_list))
+        model = BertForMultiLable.from_pretrained('bert-large-uncased', num_labels=len(label_list))
     t_total = int(len(train_dataloader) / args.gradient_accumulation_steps * args.epochs)
 
     param_optimizer = list(model.named_parameters())
@@ -189,8 +190,8 @@ def main():
     parser.add_argument("--sorted", default=1, type=int, help='1 : True  0:False ')
     parser.add_argument("--n_gpu", type=str, default='0', help='"0,1,.." or "0" or "" ')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
-    parser.add_argument("--train_batch_size", default=8, type=int)
-    parser.add_argument('--eval_batch_size', default=8, type=int)
+    parser.add_argument("--train_batch_size", default=2, type=int)
+    parser.add_argument('--eval_batch_size', default=2, type=int)
     parser.add_argument("--train_max_seq_len", default=256, type=int)
     parser.add_argument("--eval_max_seq_len", default=256, type=int)
     parser.add_argument('--loss_scale', type=float, default=0)
