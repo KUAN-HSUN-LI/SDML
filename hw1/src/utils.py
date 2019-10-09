@@ -6,11 +6,11 @@ def remove_info(dataset):
     return dataset
 
 
-def plot():
+def plot(save_dir):
     import matplotlib.pyplot as plt
     import json
 
-    with open('../model/history.json', 'r') as f:
+    with open('../model/%s/history.json' % save_dir, 'r') as f:
         history = json.loads(f.read())
 
     train_loss = [l['loss'] for l in history['train']]
@@ -23,14 +23,14 @@ def plot():
     plt.plot(train_loss, label='train')
     plt.plot(valid_loss, label='valid')
     plt.legend()
-    plt.savefig('../model/loss.png')
+    plt.savefig('../model/%s/loss.png' % save_dir)
 
     plt.figure(figsize=(7, 5))
     plt.title('F1 Score')
     plt.plot(train_f1, label='train')
     plt.plot(valid_f1, label='valid')
     plt.legend()
-    plt.savefig('../model/f1_score.png')
+    plt.savefig('../model/%s/f1_score.png' % save_dir)
 
     print('Best F1 score ', max([[l['f1'], idx] for idx, l in enumerate(history['valid'])]))
 

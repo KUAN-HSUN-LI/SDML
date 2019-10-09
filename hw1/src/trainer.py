@@ -71,9 +71,9 @@ class Trainer:
         l_loss = self.criteria(outputs, labels)
         return outputs, l_loss
 
-    def save(self, epoch):
-        if not os.path.exists('../model/'):
-            os.makedirs('../model/')
-        torch.save(self.model.state_dict(), '../model/model.pkl.%d' % epoch)
-        with open('../model/history.json', 'w') as f:
+    def save(self, epoch, save_dir):
+        if not os.path.exists('../model/%s/' % save_dir):
+            os.makedirs('../model/%s/' % save_dir)
+        torch.save(self.model.state_dict(), '../model/%s/model.pkl.%d' % (save_dir, epoch))
+        with open('../model/%s/history.json' % save_dir, 'w') as f:
             json.dump(self.history, f, indent=4)
