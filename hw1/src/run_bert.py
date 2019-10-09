@@ -116,7 +116,7 @@ def predict(args):
     for i, (tokens, segments, masks, labels) in trange:
         with torch.no_grad():
             o_labels = model(tokens.to(device), segments.to(device), masks.to(device))
-            o_labels = o_labels > 0.5
+            o_labels = o_labels > 0.0
             prediction.append(o_labels.to('cpu'))
 
     prediction = torch.cat(prediction).detach().numpy().astype(int)

@@ -32,9 +32,7 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
 
-        outputs = (logits,) + outputs[1:]
-
-        return outputs[0]
+        return logits
 
     def freeze_bert_encoder(self):
         for param in self.bert.parameters():
