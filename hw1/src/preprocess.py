@@ -20,13 +20,9 @@ def remove_info(dataset):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--oov_as_unk', action='store_true')
+    parser.add_argument('--pretrained_model_name', type=str, default='bert-base-uncased')
+    parser.add_argument('--max_len', type=int, default=256)
     args = parser.parse_args()
-
-    if args.oov_as_unk:
-        oov_as_unk = True
-    else:
-        oov_as_unk = False
 
     print('[Info] Process csv...')
     # for train and valid csv
@@ -36,38 +32,23 @@ def main():
     testset = pd.read_csv('../data/task2_public_testset.csv', dtype=str)
     testset = remove_info(testset)
 
-    if not os.path.exists('../dataset/'):
-        os.makedirs('../dataset/')
-    trainset.to_csv('../dataset/trainset.csv', index=False)
-    validset.to_csv('../dataset/validset.csv', index=False)
-    testset.to_csv('../dataset/testset.csv', index=False)
-
     print('[Info] Collect words and make word dictionary...')
-    preprocessor = Preprocessor()
-    words = set()
-    words |= preprocessor.collect_words('../dataset/trainset.csv')
-    words |= preprocessor.collect_words('../dataset/validset.csv')
-    words |= preprocessor.collect_words('../dataset/testset.csv')
-    print('[Info] Load embedding...')
-    embedder = Embedding('../data/glove.6B.300d.txt', words, oov_as_unk=oov_as_unk)
-    print('[Embedding Voc Size]: %d (oov_as_unk: %r)' % (embedder.get_vocabulary_size(), oov_as_unk))
-
-    PAD_TOKEN = embedder.to_index('<pad>')
+    preprocessor = Preprocessor(args.pretrained_model_name)
 
     print('[INFO] Make dataset...')
-    train = preprocessor.get_dataset('../dataset/trainset.csv', embedder, pad_idx=PAD_TOKEN, n_workers=4)
-    valid = preprocessor.get_dataset('../dataset/validset.csv', embedder, pad_idx=PAD_TOKEN, n_workers=4)
-    test = preprocessor.get_dataset('../dataset/testset.csv', embedder, pad_idx=PAD_TOKEN, n_workers=4)
+    trainData = preprocessor.get_dataset(trainset, args.max_len, n_workers=4)
+    validData = preprocessor.get_dataset(validset, args.max_len, n_workers=4)
+    testData = preprocessor.get_dataset(testset, args.max_len, n_workers=4)
 
     print('[INFO] Save pickles...')
-    with open('../dataset/embedding.pkl', 'wb') as f:
-        pickle.dump(embedder, f)
-    with open('../dataset/trainData.pkl', 'wb') as f:
-        pickle.dump(train, f)
-    with open('../dataset/validData.pkl', 'wb') as f:
-        pickle.dump(valid, f)
-    with open('../dataset/testData.pkl', 'wb') as f:
-        pickle.dump(test, f)
+    if not os.path.exists('../dataset/'):
+        os.makedirs('../dataset/')
+    with open('../dataset/trainData_%d.pkl' % args.max_len, 'wb') as f:
+        pickle.dump(trainData, f)
+    with open('../dataset/validData_%d.pkl' % args.max_len, 'wb') as f:
+        pickle.dump(validData, f)
+    with open('../dataset/testData_%d.pkl' % args.max_len, 'wb') as f:
+        pickle.dump(testData, f)
 
 
 if __name__ == '__main__':
