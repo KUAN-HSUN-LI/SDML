@@ -10,12 +10,14 @@ def main():
     parser.add_argument("--do_data", action='store_true')
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_test", action='store_true')
-    parser.add_argument('--pretrained_model_name', default='bert-base-uncased', type=str)
+    parser.add_argument('--pretrained_model_name', default='bert-large-uncased', type=str)
     parser.add_argument('--max_len', default=256, type=int)
     parser.add_argument('--epochs', default=6, type=int)
-    parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--batch_size', default=1, type=int)
+    parser.add_argument('--gradient_accumulation_steps', default=1, type=int)
+    parser.add_argument("--grad_clip", default=1.0, type=float)
     parser.add_argument('--learning_rate', default=1e-5, type=float)
-    parser.add_argument('--cuda', default=1, type=int)
+    parser.add_argument('--cuda', default=0, type=int)
     parser.add_argument('--checkpoint', default=-1, type=int)
     args = parser.parse_args()
 
@@ -80,7 +82,8 @@ def train(args):
 
     history = {'train': [], 'valid': []}
 
-    trainer = Trainer(args.batch_size, train_data, valid_data, device, model, opt, criteria, history)
+    trainer = Trainer(args.batch_size, train_data, valid_data, device, model, opt, criteria, history,
+                      args.gradient_accumulation_steps, args.grad_clip)
     for epoch in range(args.epochs):
         print('Epoch: {}'.format(epoch))
         if epoch > 1:

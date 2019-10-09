@@ -1,13 +1,15 @@
 import os
 import torch
 from torch.utils.data import DataLoader
+from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 import json
 from metrics import F1
 
 
 class Trainer:
-    def __init__(self, batch_size, trainData, validData, device, model, opt, criteria, history):
+    def __init__(self, batch_size, trainData, validData,
+                 device, model, opt, criteria, history, gradient_accumulation_steps=1, grad_clip=0.0):
         self.batch_size = batch_size
         self.trainData = trainData
         self.validData = validData
@@ -16,6 +18,9 @@ class Trainer:
         self.opt = opt
         self.criteria = criteria
         self.history = history
+
+        self.gradient_accumulation_steps = gradient_accumulation_steps
+        self.grad_clip = grad_clip
 
     def run_epoch(self, epoch, training):
         self.model.train(training)
@@ -36,18 +41,22 @@ class Trainer:
         trange = tqdm(enumerate(dataloader), total=len(dataloader), desc=description)
         loss = 0
         f1_score = F1()
-        for i, (tokens, segments, masks, labels) in trange:
+        for step, (tokens, segments, masks, labels) in trange:
             o_labels, batch_loss = self._run_iter(tokens, segments, masks, labels)
             if training:
-                self.opt.zero_grad()
+                if self.gradient_accumulation_steps > 1:
+                    batch_loss = batch_loss / self.gradient_accumulation_steps
                 batch_loss.backward()
-                self.opt.step()
+                # clip_grad_norm_(self.model.parameters(), self.grad_clip)
+                if (step + 1) % self.gradient_accumulation_steps == 0:
+                    self.opt.step()
+                    self.opt.zero_grad()
 
             loss += batch_loss.item()
             f1_score.update(o_labels.cpu(), labels)
 
             trange.set_postfix(
-                loss=loss / (i + 1), f1=f1_score.print_score())
+                loss=loss / (step + 1), f1=f1_score.print_score())
         if training:
             self.history['train'].append({'f1': f1_score.get_score(), 'loss': loss / len(trange)})
         else:
