@@ -7,7 +7,7 @@
 2. preprocess data:
 `python run_bert.py --do_data`
 3. Fine tuning bert model:
-`python run_bert.py --do_train --save_best --do_lower_case`
+`python run_bert.py --do_train --do_lower_case`
 4. Predict new data:
 `python run_bert.py --do_test --do_lower_case`
 5. Get submission CSV:
