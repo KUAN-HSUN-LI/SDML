@@ -25,11 +25,13 @@ class BertDataset(Dataset):
             abstract_len = len(data['tokens'])
             if abstract_len > max_len:
                 batch_tokens.append(data['tokens'][:max_len])
-                batch_segments.append(data['segments'][:max_len])
+                # batch_segments.append(data['segments'][:max_len])
+                batch_segments.append([0] * max_len)
                 batch_masks.append([1] * max_len)
             else:
                 batch_tokens.append(data['tokens'] + [0] * (max_len - abstract_len))
-                batch_segments.append(data['segments'] + [0] * (max_len - abstract_len))
+                # batch_segments.append(data['segments'] + [0] * (max_len - abstract_len))
+                batch_segments.append([0] * max_len)
                 batch_masks.append([1] * abstract_len + [0] * (max_len - abstract_len))
             # gather labels
             if 'Label' in data:

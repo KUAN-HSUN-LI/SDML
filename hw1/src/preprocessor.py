@@ -82,7 +82,7 @@ class Preprocessor:
         processed['tokens'] = sum(processed['tokens'], [])
         processed['tokens'] = [self.tokenizer.convert_tokens_to_ids('[CLS]')] + processed['tokens'] + [
             self.tokenizer.convert_tokens_to_ids('[SEP]')]
-        processed['segments'] = [0] * len(processed['tokens'])
+        # processed['segments'] = [0] * len(processed['tokens'])
 
         if 'Task 2' in data:
             processed['Label'] = self.label_to_onehot(data['Task 2'])
