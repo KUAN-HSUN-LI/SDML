@@ -1,11 +1,11 @@
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import pickle
-from network import SimpleNet
+from network import BertForMultiLabelSequenceClassification
 import pandas as pd
 import os
+import argparse
 
 
 def SubmitGenerator(prediction, sampleFile, public=True, filename='prediction.csv'):
@@ -35,31 +35,35 @@ def SubmitGenerator(prediction, sampleFile, public=True, filename='prediction.cs
 
 
 def main():
-    with open('../dataset/embedding.pkl', 'rb') as f:
-        embedder = pickle.load(f)
-    with open('../dataset/testData.pkl', 'rb') as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pretrained_model_name', type=str, default='bert-base-uncased')
+    parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument('--max_len', default=256, type=int)
+    parser.add_argument('--cuda', default=1, type=int)
+    parser.add_argument('--checkpoint', default=0, type=int)
+    args = parser.parse_args()
+
+    with open('../dataset/testData_%d.pkl' % args.max_len, 'rb') as f:
         testData = pickle.load(f)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = SimpleNet(embedder.get_dim())
-    model.load_state_dict(torch.load('../model/model.pkl.{}'.format(16)))
+    device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.pretrained_model_name, num_labels=4)
+    model.load_state_dict(torch.load('../model/model.pkl.{}'.format(args.checkpoint)))
     model.train(False)
     model.to(device)
-    embedding = nn.Embedding(embedder.get_vocabulary_size(), embedder.get_dim())
-    embedding.weight = torch.nn.Parameter(embedder.vectors)
 
     dataloader = DataLoader(dataset=testData,
-                            batch_size=64,
+                            batch_size=args.batch_size,
                             shuffle=False,
                             collate_fn=testData.collate_fn,
                             num_workers=1)
     trange = tqdm(enumerate(dataloader), total=len(dataloader), desc='Predict')
     prediction = []
-    for i, (x, y, _l) in trange:
-        x = embedding(x)
-        o_labels = model(x.to(device))
-        o_labels = o_labels > 0.5
-        prediction.append(o_labels.to('cpu'))
+    for i, (tokens, segments, masks, labels) in trange:
+        with torch.no_grad():
+            o_labels = model(tokens.to(device), segments.to(device), masks.to(device))
+            o_labels = o_labels > 0.5
+            prediction.append(o_labels.to('cpu'))
 
     prediction = torch.cat(prediction).detach().numpy().astype(int)
 
