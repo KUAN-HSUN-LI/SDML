@@ -26,7 +26,7 @@ def main():
         preprocess(args)
 
     if args.do_train:
-        data_name = '%s_%d' % (args.pretrained_model_name.split('-')[1], args.max_len)
+        data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
         if not os.path.exists('../dataset/trainData_%s.pkl' % data_name):
             preprocess(args)
         train(args)
@@ -58,7 +58,7 @@ def preprocess(args):
     test_data = preprocessor.get_dataset(testset, args.max_len, n_workers=4)
 
     print('[INFO] Save pickles...')
-    data_name = '%s_%d' % (args.pretrained_model_name.split('-')[1], args.max_len)
+    data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
     if not os.path.exists('../dataset/'):
         os.makedirs('../dataset/')
     with open('../dataset/trainData_%s.pkl' % data_name, 'wb') as f:
@@ -74,7 +74,7 @@ def train(args):
     from network import BertForMultiLabelSequenceClassification
     from utils import plot
 
-    data_name = '%s_%d' % (args.pretrained_model_name.split('-')[1], args.max_len)
+    data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
     with open('../dataset/trainData_%s.pkl' % data_name, 'rb') as f:
         train_data = pickle.load(f)
     with open('../dataset/validData_%s.pkl' % data_name, 'rb') as f:
@@ -106,7 +106,7 @@ def predict(args):
     from network import BertForMultiLabelSequenceClassification
     from utils import SubmitGenerator
 
-    data_name = '%s_%d' % (args.pretrained_model_name.split('-')[1], args.max_len)
+    data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
     with open('../dataset/testData_%s.pkl' % data_name, 'rb') as f:
         testData = pickle.load(f)
 

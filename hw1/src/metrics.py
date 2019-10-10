@@ -3,7 +3,7 @@ import torch
 
 class F1:
     def __init__(self):
-        self.threshold = 0.5
+        self.threshold = 0.0
         self.n_precision = 0
         self.n_recall = 0
         self.n_corrects = 0
