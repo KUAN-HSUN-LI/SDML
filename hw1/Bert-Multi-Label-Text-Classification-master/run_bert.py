@@ -22,7 +22,8 @@ warnings.filterwarnings("ignore")
 
 def run_train(args):
     # --------- data
-    processor = BertProcessor(vocab_path=config['bert_vocab_path'], do_lower_case=args.do_lower_case)
+    # processor = BertProcessor(vocab_path=config['bert_vocab_path'], do_lower_case=args.do_lower_case)
+    processor = BertProcessor()
     label_list = processor.get_labels()
     label2id = {label: i for i, label in enumerate(label_list)}
     id2label = {i: label for i, label in enumerate(label_list)}
@@ -31,11 +32,11 @@ def run_train(args):
     train_examples = processor.create_examples(lines=train_data,
                                                example_type='train',
                                                cached_examples_file=config[
-                                                    'data_dir'] / f"cached_train_examples_{args.arch}")
+                                                                        'data_dir'] / f"cached_train_examples_{args.arch}")
     train_features = processor.create_features(examples=train_examples,
                                                max_seq_len=args.train_max_seq_len,
                                                cached_features_file=config[
-                                                    'data_dir'] / "cached_train_features_{}_{}".format(
+                                                                        'data_dir'] / "cached_train_features_{}_{}".format(
                                                    args.train_max_seq_len, args.arch
                                                ))
     train_dataset = processor.create_dataset(train_features, is_sorted=args.sorted)
@@ -67,16 +68,20 @@ def run_train(args):
         args.resume_path = Path(args.resume_path)
         model = BertForMultiLable.from_pretrained(args.resume_path, num_labels=len(label_list))
     else:
-        model = BertForMultiLable.from_pretrained(config['bert_model_dir'], num_labels=len(label_list))
+        model = BertForMultiLable.from_pretrained('bert-large-uncased', num_labels=len(label_list))
+        # model = BertForMultiLable.from_pretrained('bert-large-uncased', num_labels=len(label_list))
     t_total = int(len(train_dataloader) / args.gradient_accumulation_steps * args.epochs)
 
     param_optimizer = list(model.named_parameters())
+    # no_decay = ['bias', 'LayerNorm.weight', 'gamma', 'beta']
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],'weight_decay': args.weight_decay},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+         'weight_decay': args.weight_decay},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     warmup_steps = int(t_total * args.warmup_proportion)
+    # optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon, betas=(0.5, 0.999))
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
     lr_scheduler = WarmupLinearSchedule(optimizer, warmup_steps=warmup_steps, t_total=t_total)
 
@@ -90,8 +95,8 @@ def run_train(args):
     # ---- callbacks
     logger.info("initializing callbacks")
     train_monitor = TrainingMonitor(file_dir=config['figure_dir'], arch=args.arch)
-    model_checkpoint = ModelCheckpoint(checkpoint_dir=config['checkpoint_dir'],mode=args.mode,
-                                       monitor=args.monitor,arch=args.arch,
+    model_checkpoint = ModelCheckpoint(checkpoint_dir=config['checkpoint_dir'], mode=args.mode,
+                                       monitor=args.monitor, arch=args.arch,
                                        save_best_only=args.save_best)
 
     # **************************** training model ***********************
@@ -134,7 +139,8 @@ def run_test(args):
                                         preprocessor=EnglishPreProcessor(),
                                         is_train=False)
     lines = list(zip(sentences, targets))
-    processor = BertProcessor(vocab_path=config['bert_vocab_path'], do_lower_case=args.do_lower_case)
+    # processor = BertProcessor(vocab_path=config['bert_vocab_path'], do_lower_case=args.do_lower_case)
+    processor = BertProcessor()
     label_list = processor.get_labels()
     id2label = {i: label for i, label in enumerate(label_list)}
 
@@ -153,7 +159,7 @@ def run_test(args):
     test_sampler = SequentialSampler(test_dataset)
     test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=args.train_batch_size)
     model = BertForMultiLable.from_pretrained(config['checkpoint_dir']
-                                              # / 'checkpoint-epoch-6'
+                                              / 'checkpoint-epoch-9'
                                               , num_labels=len(label_list))
 
     # ----------- predicting
@@ -165,7 +171,7 @@ def run_test(args):
     print(result)
 
     import pickle
-    with open('./pybert/sdml/test_prob_raw.pkl', 'wb') as f:
+    with open('./pybert/%s/test_prob_raw.pkl' % args.arch, 'wb') as f:
         pickle.dump(result, f)
 
 
@@ -189,8 +195,8 @@ def main():
     parser.add_argument("--sorted", default=1, type=int, help='1 : True  0:False ')
     parser.add_argument("--n_gpu", type=str, default='0', help='"0,1,.." or "0" or "" ')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
-    parser.add_argument("--train_batch_size", default=8, type=int)
-    parser.add_argument('--eval_batch_size', default=8, type=int)
+    parser.add_argument("--train_batch_size", default=2, type=int)
+    parser.add_argument('--eval_batch_size', default=2, type=int)
     parser.add_argument("--train_max_seq_len", default=256, type=int)
     parser.add_argument("--eval_max_seq_len", default=256, type=int)
     parser.add_argument('--loss_scale', type=float, default=0)
@@ -198,7 +204,7 @@ def main():
     parser.add_argument("--weight_decay", default=0.01, type=float)
     parser.add_argument("--adam_epsilon", default=1e-8, type=float)
     parser.add_argument("--grad_clip", default=1.0, type=float)
-    parser.add_argument("--learning_rate", default=2e-5, type=float)
+    parser.add_argument("--learning_rate", default=1e-5, type=float)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--fp16', action='store_true')
     parser.add_argument('--fp16_opt_level', type=str, default='O1')

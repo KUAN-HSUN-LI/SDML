@@ -1,30 +1,16 @@
 import pandas as pd
 from multiprocessing import Pool
-from nltk.tokenize import word_tokenize
-# from tqdm import tqdm_notebook as tqdm
+from transformers import BertTokenizer
 from tqdm import tqdm
+import ipdb
 
-from dataset import AbstractDataset
+from dataset import BertDataset
 
 
 class Preprocessor:
 
-    def collect_words(self, data_path, n_workers=4):
-        df = pd.read_csv(data_path, dtype=str)
-
-        sent_list = []
-        for i in df.iterrows():
-            sent_list += i[1]['Abstract'].split('$$$')
-
-        chunks = [
-            ' '.join(sent_list[i:i + len(sent_list) // n_workers])
-            for i in range(0, len(sent_list), len(sent_list) // n_workers)
-        ]
-        with Pool(n_workers) as pool:
-            chunks = pool.map_async(word_tokenize, chunks)
-            words = set(sum(chunks.get(), []))
-
-        return words
+    def __init__(self, pretrained_model_name):
+        self.tokenizer = BertTokenizer.from_pretrained(pretrained_model_name)
 
     def label_to_onehot(self, labels):
         """ Convert label to onehot .
@@ -39,22 +25,16 @@ class Preprocessor:
             onehot[label_dict[l]] = 1
         return onehot
 
-    def sentence_to_indices(self, sentence, word_dict):
+    def sentence_to_indices(self, sentence):
         """ Convert sentence to its word indices.
         Args:
             sentence (str): One string.
         Return:
             indices (list of int): List of word indices.
         """
-        return [word_dict.to_index(word) for word in word_tokenize(sentence)]
+        return [self.tokenizer.convert_tokens_to_ids(word) for word in self.tokenizer.tokenize(sentence)]
 
-    def get_dataset(self, data_path, word_dict, pad_idx=0, n_workers=4):
-        """ Load data and return dataset for training and validating.
-
-        Args:
-            data_path (str): Path to the data.
-        """
-        dataset = pd.read_csv(data_path, dtype=str)
+    def get_dataset(self, dataset, max_len, n_workers=4):
 
         results = [None] * n_workers
         with Pool(processes=n_workers) as pool:
@@ -66,7 +46,7 @@ class Preprocessor:
                     batch_end = (len(dataset) // n_workers) * (i + 1)
 
                 batch = dataset[batch_start: batch_end]
-                results[i] = pool.apply_async(self.preprocess_samples, args=(batch, word_dict))
+                results[i] = pool.apply_async(self.preprocess_samples, [batch])
 
             pool.close()
             pool.join()
@@ -74,9 +54,9 @@ class Preprocessor:
         processed = []
         for result in results:
             processed += result.get()
-        return AbstractDataset(processed, pad_idx)
+        return BertDataset(processed, max_len)
 
-    def preprocess_samples(self, dataset, word_dict):
+    def preprocess_samples(self, dataset):
         """ Worker function.
 
         Args:
@@ -86,23 +66,25 @@ class Preprocessor:
         """
         processed = []
         for sample in tqdm(dataset.iterrows(), total=len(dataset)):
-            processed.append(self.preprocess_sample(sample[1], word_dict))
+            processed.append(self.preprocess_sample(sample[1]))
 
         return processed
 
-    def preprocess_sample(self, data, word_dict):
+    def preprocess_sample(self, data):
         """
         Args:
             data (dict)
         Returns:
             dict
         """
-        processed = {}
-        processed['Abstract'] = [self.sentence_to_indices(sent, word_dict)
-                                 for sent in data['Abstract'].split('$$$')]
+        processed = dict()
+        processed['tokens'] = [self.sentence_to_indices(sent) for sent in data['Abstract'].split('$$$')]
+        processed['tokens'] = sum(processed['tokens'], [])
+        processed['tokens'] = [self.tokenizer.convert_tokens_to_ids('[CLS]')] + processed['tokens'] + [
+            self.tokenizer.convert_tokens_to_ids('[SEP]')]
+        # processed['segments'] = [0] * len(processed['tokens'])
+
         if 'Task 2' in data:
             processed['Label'] = self.label_to_onehot(data['Task 2'])
 
         return processed
-
-        return words

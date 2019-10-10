@@ -1,18 +1,20 @@
 ### HW1
 
 ## Make Dataset
-give each oov an embedding:
-`python3 preprocess.py`
-
-treat all oov as unk:
-`python3 preprocess.py --oov_as_unk`
+`python run_bert --do_data`
 
 ## Train
---save_dir_name: model(default)
-
---cuda ordinal: 0(default)
-
-`python3 train.py --save_dir_name 'model_L2Reg_unkFalse' --cuda 0`
+`python run_bert --do_train 
+--pretrained_model_name 'bert-base-uncased' 
+--max_len 256 
+--epochs 6 
+--batch_size 2 
+--learning_rate 1e-5 
+--cuda 0 `
 
 ## Predict
-`python3 predict.py`
+`python run_bert --do_test 
+--pretrained_model_name 'bert-base-uncased' 
+--max_len 256 
+--cuda 0 
+--checkpoint 3`
