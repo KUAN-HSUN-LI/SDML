@@ -5,32 +5,30 @@ from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 import json
 from metrics import F1
+from torch.optim.lr_scheduler import StepLR
 
 
 class Trainer:
-    def __init__(self, batch_size, trainData, validData,
-                 device, model, opt, criteria, history, gradient_accumulation_steps=1, grad_clip=0.0):
-        self.batch_size = batch_size
-        self.trainData = trainData
-        self.validData = validData
+    def __init__(self, device, model, batch_size, lr, gradient_accumulation_steps=1, grad_clip=0.0):
         self.device = device
         self.model = model
-        self.opt = opt
-        self.criteria = criteria
-        self.history = history
-
+        self.batch_size = batch_size
+        self.opt = torch.optim.AdamW(self.model.parameters(), lr=lr, eps=1e-8)
+        self.scheduler = StepLR(self.opt, step_size=1, gamma=0.5)
+        self.criteria = torch.nn.BCEWithLogitsLoss()
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.grad_clip = grad_clip
+        self.history = {'train': [], 'valid': []}
 
-    def run_epoch(self, epoch, training):
+    def run_epoch(self, epoch, data, training):
         self.model.train(training)
         if training:
             description = 'Train'
-            dataset = self.trainData
+            dataset = data
             shuffle = True
         else:
             description = 'Valid'
-            dataset = self.validData
+            dataset = data
             shuffle = False
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
@@ -61,6 +59,8 @@ class Trainer:
             self.history['train'].append({'f1': f1_score.get_score(), 'loss': loss / len(trange)})
         else:
             self.history['valid'].append({'f1': f1_score.get_score(), 'loss': loss / len(trange)})
+
+        self.scheduler.step()
 
     def _run_iter(self, tokens, segments, masks, labels):
         tokens = tokens.to(self.device)

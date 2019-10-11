@@ -11,13 +11,13 @@ def main():
     parser.add_argument("--do_data", action='store_true')
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_test", action='store_true')
-    parser.add_argument('--pretrained_model_name', default='bert-base-uncased', type=str)
+    parser.add_argument('--model', default='bert-base-uncased', type=str, help='pretrained_model_name')
     parser.add_argument('--max_len', type=int, required=True)
     parser.add_argument('--epochs', default=6, type=int)
     parser.add_argument('--batch_size', default=8, type=int)
-    parser.add_argument('--gradient_accumulation_steps', default=1, type=int)
+    parser.add_argument('--accum', default=1, type=int, help='gradient_accumulation_steps')
     parser.add_argument("--grad_clip", default=1.0, type=float)
-    parser.add_argument('--learning_rate', default=1e-5, type=float)
+    parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--cuda', default=-1, type=int)
     parser.add_argument('--checkpoint', default=-1, type=int)
     args = parser.parse_args()
@@ -26,7 +26,7 @@ def main():
         preprocess(args)
 
     if args.do_train:
-        data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
+        data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
         if not os.path.exists('../dataset/trainData_%s.pkl' % data_name):
             preprocess(args)
         train(args)
@@ -50,7 +50,7 @@ def preprocess(args):
     testset = remove_info(testset)
 
     print('[Info] Collect words and make word dictionary...')
-    preprocessor = Preprocessor(args.pretrained_model_name)
+    preprocessor = Preprocessor(args.model)
 
     print('[INFO] Make dataset...')
     train_data = preprocessor.get_dataset(trainset, args.max_len, n_workers=4)
@@ -58,7 +58,7 @@ def preprocess(args):
     test_data = preprocessor.get_dataset(testset, args.max_len, n_workers=4)
 
     print('[INFO] Save pickles...')
-    data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
+    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
     if not os.path.exists('../dataset/'):
         os.makedirs('../dataset/')
     with open('../dataset/trainData_%s.pkl' % data_name, 'wb') as f:
@@ -74,28 +74,22 @@ def train(args):
     from network import BertForMultiLabelSequenceClassification
     from utils import plot
 
-    data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
+    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
     with open('../dataset/trainData_%s.pkl' % data_name, 'rb') as f:
         train_data = pickle.load(f)
     with open('../dataset/validData_%s.pkl' % data_name, 'rb') as f:
         valid_data = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.pretrained_model_name, num_labels=4)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4)
     model.to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, eps=1e-8)
-    criteria = torch.nn.BCEWithLogitsLoss()
 
-    history = {'train': [], 'valid': []}
+    trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip)
 
-    trainer = Trainer(args.batch_size, train_data, valid_data, device, model, opt, criteria, history,
-                      args.gradient_accumulation_steps, args.grad_clip)
     for epoch in range(args.epochs):
         print('Epoch: {}'.format(epoch))
-        if epoch > 1:
-            model.freeze_bert_encoder()
-        trainer.run_epoch(epoch, True)
-        trainer.run_epoch(epoch, False)
+        trainer.run_epoch(epoch, train_data, True)
+        trainer.run_epoch(epoch, valid_data, False)
         trainer.save(epoch, args.dir_name)
     plot(args.dir_name)
 
@@ -106,12 +100,12 @@ def predict(args):
     from network import BertForMultiLabelSequenceClassification
     from utils import SubmitGenerator
 
-    data_name = '%s_%d' % (args.pretrained_model_name.split('-', 1)[1], args.max_len)
+    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
     with open('../dataset/testData_%s.pkl' % data_name, 'rb') as f:
         testData = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.pretrained_model_name, num_labels=4)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4)
     model.load_state_dict(torch.load('../model/%s/model.pkl.%d' % (args.dir_name, args.checkpoint)))
     model.train(False)
     model.to(device)
