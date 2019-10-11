@@ -14,7 +14,7 @@ class Trainer:
         self.model = model
         self.batch_size = batch_size
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=lr, eps=1e-8)
-        self.scheduler = StepLR(self.opt, step_size=1, gamma=0.5)
+        self.scheduler = StepLR(self.opt, step_size=2, gamma=0.1)
         self.criteria = torch.nn.BCEWithLogitsLoss()
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.grad_clip = grad_clip
@@ -39,8 +39,8 @@ class Trainer:
         trange = tqdm(enumerate(dataloader), total=len(dataloader), desc=description)
         loss = 0
         f1_score = F1()
-        for step, (tokens, segments, masks, labels) in trange:
-            o_labels, batch_loss = self._run_iter(tokens, segments, masks, labels)
+        for step, (tokens, segments, masks, tfidf, labels) in trange:
+            o_labels, batch_loss = self._run_iter(tokens, segments, masks, tfidf, labels)
             if training:
                 if self.gradient_accumulation_steps > 1:
                     batch_loss = batch_loss / self.gradient_accumulation_steps
@@ -62,12 +62,13 @@ class Trainer:
 
         self.scheduler.step()
 
-    def _run_iter(self, tokens, segments, masks, labels):
+    def _run_iter(self, tokens, segments, masks, tfidf, labels):
         tokens = tokens.to(self.device)
         segments = segments.to(self.device)
         masks = masks.to(self.device)
+        tfidf = tfidf.to(self.device)
         labels = labels.to(self.device)
-        outputs = self.model(tokens, token_type_ids=segments, attention_mask=masks)
+        outputs = self.model(tokens, tfidf, token_type_ids=segments, attention_mask=masks)
         l_loss = self.criteria(outputs, labels)
         return outputs, l_loss
 

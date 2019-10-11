@@ -4,8 +4,6 @@ from transformers import BertTokenizer
 from tqdm import tqdm
 import ipdb
 
-from dataset import BertDataset
-
 
 class Preprocessor:
 
@@ -34,9 +32,10 @@ class Preprocessor:
         """
         return [self.tokenizer.convert_tokens_to_ids(word) for word in self.tokenizer.tokenize(sentence)]
 
-    def get_dataset(self, dataset, max_len, n_workers=4):
+    def get_dataset(self, dataset, n_workers=4):
 
         results = [None] * n_workers
+        tfidf_results = [None] * n_workers
         with Pool(processes=n_workers) as pool:
             for i in range(n_workers):
                 batch_start = (len(dataset) // n_workers) * i
@@ -47,6 +46,7 @@ class Preprocessor:
 
                 batch = dataset[batch_start: batch_end]
                 results[i] = pool.apply_async(self.preprocess_samples, [batch])
+                tfidf_results[i] = pool.apply_async(self.preprocess_tfidf_samples, [batch])
 
             pool.close()
             pool.join()
@@ -54,7 +54,10 @@ class Preprocessor:
         processed = []
         for result in results:
             processed += result.get()
-        return BertDataset(processed, max_len)
+        tfidf_processed = []
+        for tfidf_result in tfidf_results:
+            tfidf_processed += tfidf_result.get()
+        return processed, tfidf_processed
 
     def preprocess_samples(self, dataset):
         """ Worker function.
@@ -86,5 +89,25 @@ class Preprocessor:
 
         if 'Task 2' in data:
             processed['Label'] = self.label_to_onehot(data['Task 2'])
+
+        return processed
+
+    def preprocess_tfidf_samples(self, dataset):
+        """ Worker function.
+
+        Args:
+            dataset (list of dict)
+        Returns:
+            list of processed dict.
+        """
+        processed = []
+        for sample in tqdm(dataset.iterrows(), total=len(dataset)):
+            processed.append(self.preprocess_tfidf_sample(sample[1]))
+
+        return processed
+
+    def preprocess_tfidf_sample(self, data):
+        processed = [self.sentence_to_indices(sent) for sent in data['Abstract'].split('$$$')]
+        processed = sum(processed, [])
 
         return processed

@@ -3,7 +3,8 @@ import pandas as pd
 import pickle
 import os
 from argparse import ArgumentParser
-
+from tfidf import *
+from dataset import BertDataset
 
 def main():
     parser = ArgumentParser()
@@ -53,9 +54,15 @@ def preprocess(args):
     preprocessor = Preprocessor(args.model)
 
     print('[INFO] Make dataset...')
-    train_data = preprocessor.get_dataset(trainset, args.max_len, n_workers=4)
-    valid_data = preprocessor.get_dataset(validset, args.max_len, n_workers=4)
-    test_data = preprocessor.get_dataset(testset, args.max_len, n_workers=4)
+    train, train_tfidf = preprocessor.get_dataset(trainset, n_workers=12)
+    valid, valid_tfidf = preprocessor.get_dataset(validset, n_workers=12)
+    test, test_tfidf = preprocessor.get_dataset(testset, n_workers=12)
+
+    tfidf = get_tfidf(train_tfidf + valid_tfidf + test_tfidf)
+
+    train_data = BertDataset(train, tfidf[:6300], args.max_len)
+    valid_data = BertDataset(train, tfidf[6300:7000], args.max_len)
+    test_data = BertDataset(train, tfidf[7000:], args.max_len)
 
     print('[INFO] Save pickles...')
     data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
@@ -81,7 +88,7 @@ def train(args):
         valid_data = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4, tfidf_len=args.max_len)
     model.to(device)
 
     trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip)
