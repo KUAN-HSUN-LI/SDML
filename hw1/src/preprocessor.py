@@ -1,14 +1,17 @@
 import pandas as pd
 from multiprocessing import Pool
 from transformers import BertTokenizer
+from nltk.tokenize import word_tokenize
 from tqdm import tqdm
 import ipdb
+import torch
 
 
 class Preprocessor:
 
-    def __init__(self, pretrained_model_name):
+    def __init__(self, pretrained_model_name, embedding):
         self.tokenizer = BertTokenizer.from_pretrained(pretrained_model_name)
+        self.embedding = embedding
 
     def label_to_onehot(self, labels):
         """ Convert label to onehot .
@@ -57,6 +60,10 @@ class Preprocessor:
         tfidf_processed = []
         for tfidf_result in tfidf_results:
             tfidf_processed += tfidf_result.get()
+
+        # processed = self.preprocess_samples(dataset)
+        # tfidf_processed = self.preprocess_tfidf_samples(dataset)
+
         return processed, tfidf_processed
 
     def preprocess_samples(self, dataset):
@@ -107,7 +114,28 @@ class Preprocessor:
         return processed
 
     def preprocess_tfidf_sample(self, data):
-        processed = [self.sentence_to_indices(sent) for sent in data['Abstract'].split('$$$')]
-        processed = sum(processed, [])
 
+        processed = [self.embedding.to_index(word)
+                     for sent in data['Abstract'].split('$$$') for word in word_tokenize(sent)]
+        # processed = sum(processed, [])
         return processed
+
+    def get_glove_tfidf_emb(self, dataset, tfidf):
+        data_num = 0
+        abstract_embs = torch.Tensor()
+        for data in tqdm(dataset.iterrows(), total=len(dataset)):
+            abstract_emb = torch.zeros(300)
+            word_num = 0
+            for sentence in data[1]['Abstract'].split('$$$'):
+                for word in word_tokenize(sentence):
+                    word_idx = self.embedding.to_index(word)
+                    word_emb = self.embedding.vectors[word_idx]
+                    word_emb *= tfidf[data_num][word_num]      # (tensor[300])
+                    abstract_emb += word_emb
+                    word_num += 1
+            abstract_emb /= word_num
+            abstract_emb *= 10
+            abstract_embs = torch.cat((abstract_embs, abstract_emb.unsqueeze(0)))
+            data_num += 1
+
+        return abstract_embs        # tensor[6300, 300]

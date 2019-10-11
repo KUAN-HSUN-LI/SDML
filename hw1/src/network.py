@@ -10,16 +10,16 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
     the pooled output.
     """
 
-    def __init__(self, config, tfidf_len):
+    def __init__(self, config):
         super(BertForMultiLabelSequenceClassification, self).__init__(config)
 
         self.bert = BertModel(config)
         self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = torch.nn.Linear(config.hidden_size + tfidf_len, config.num_labels)
+        self.classifier = torch.nn.Linear(config.hidden_size + 300, config.num_labels)
 
         self.init_weights()
 
-    def forward(self, input_ids, tfidf, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, doc_embs, token_type_ids=None, attention_mask=None,
                 position_ids=None, head_mask=None, labels=None):
 
         outputs = self.bert(input_ids,
@@ -27,7 +27,7 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
                             attention_mask=attention_mask,
                             position_ids=None, head_mask=None)[1]
         outputs = self.dropout(outputs)
-        logits = self.classifier(torch.cat((outputs, tfidf), 1))
+        logits = self.classifier(torch.cat((outputs, doc_embs), 1))
 
         return logits
 

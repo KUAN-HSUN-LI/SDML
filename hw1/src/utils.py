@@ -61,3 +61,22 @@ def SubmitGenerator(prediction, sampleFile, public=True, filename='prediction.cs
         submit['OTHERS'] = [0]*redundant + list(prediction[:, 3])
     df = pd.DataFrame.from_dict(submit)
     df.to_csv(filename, index=False)
+
+
+def collect_words(df, n_workers=12):
+    from multiprocessing import Pool
+    from nltk.tokenize import word_tokenize
+
+    sent_list = []
+    for i in df.iterrows():
+        sent_list += i[1]['Abstract'].split('$$$')
+
+    chunks = [
+        ' '.join(sent_list[i:i + len(sent_list) // n_workers])
+        for i in range(0, len(sent_list), len(sent_list) // n_workers)
+    ]
+    with Pool(n_workers) as pool:
+        chunks = pool.map_async(word_tokenize, chunks)
+        words = set(sum(chunks.get(), []))
+
+    return words

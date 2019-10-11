@@ -3,9 +3,9 @@ import torch
 
 
 class BertDataset(Dataset):
-    def __init__(self, data, tfidf_data, max_len):
+    def __init__(self, data, doc_emb, max_len):
         self.data = data
-        self.tfidf_data = tfidf_data
+        self.doc_emb = doc_emb
         self.max_len = max_len
 
     def __len__(self):
@@ -14,7 +14,7 @@ class BertDataset(Dataset):
     def __getitem__(self, index):
         return {
             'bert_data': self.data[index],
-            'tfidf_data': self.tfidf_data[index] + [0] * 2
+            'doc_emb': self.doc_emb[index]
         }
 
     def collate_fn(self, datas):
@@ -24,10 +24,10 @@ class BertDataset(Dataset):
         batch_segments = []
         batch_masks = []
         batch_label = []
-        batch_tfidf = []
+        batch_doc_embs = torch.FloatTensor()
         for data in datas:
             bert_data = data['bert_data']
-            tfidf_data = data['tfidf_data']
+            batch_doc_embs = torch.cat((batch_doc_embs, data['doc_emb'].unsqueeze(0)))
 
             # padding abstract to make them in same length
             abstract_len = len(bert_data['tokens'])
@@ -36,15 +36,13 @@ class BertDataset(Dataset):
                 # batch_segments.append(bert_data['segments'][:max_len])
                 batch_segments.append([0] * max_len)
                 batch_masks.append([1] * max_len)
-                batch_tfidf.append(tfidf_data[:self.max_len])
             else:
                 batch_tokens.append(bert_data['tokens'] + [0] * (max_len - abstract_len))
                 # batch_segments.append(bert_data['segments'] + [0] * (max_len - abstract_len))
                 batch_segments.append([0] * max_len)
                 batch_masks.append([1] * abstract_len + [0] * (max_len - abstract_len))
-                batch_tfidf.append(tfidf_data + [0.0] * (self.max_len - abstract_len))
             # gather labels
             if 'Label' in bert_data:
                 batch_label.append(bert_data['Label'])
         return torch.LongTensor(batch_tokens), torch.LongTensor(batch_segments), torch.LongTensor(
-            batch_masks), torch.FloatTensor(batch_tfidf), torch.FloatTensor(batch_label)
+            batch_masks), torch.FloatTensor(batch_doc_embs), torch.FloatTensor(batch_label)

@@ -3,8 +3,11 @@ import pandas as pd
 import pickle
 import os
 from argparse import ArgumentParser
-from tfidf import *
+from tfidf import get_tfidf
 from dataset import BertDataset
+import ipdb
+from embedding import Embedding
+from utils import collect_words
 
 def main():
     parser = ArgumentParser()
@@ -50,19 +53,29 @@ def preprocess(args):
     testset = pd.read_csv('../data/task2_public_testset.csv', dtype=str)
     testset = remove_info(testset)
 
-    print('[Info] Collect words and make word dictionary...')
-    preprocessor = Preprocessor(args.model)
+    print('[Info] Collect words and make embedding...')
+    words = set()
+    words |= collect_words(trainset)
+    words |= collect_words(validset)
+    words |= collect_words(testset)
+    embedding = Embedding('../data/glove.6B.300d.txt', words)
+    preprocessor = Preprocessor(args.model, embedding)
 
-    print('[INFO] Make dataset...')
+    print('[INFO] Get data and tfidf...')
     train, train_tfidf = preprocessor.get_dataset(trainset, n_workers=12)
     valid, valid_tfidf = preprocessor.get_dataset(validset, n_workers=12)
     test, test_tfidf = preprocessor.get_dataset(testset, n_workers=12)
 
+    print('[INFO] Make abstract tfidf document embedding...')
     tfidf = get_tfidf(train_tfidf + valid_tfidf + test_tfidf)
+    train_doc_emb = preprocessor.get_glove_tfidf_emb(trainset, tfidf[:6300])
+    valid_doc_emb = preprocessor.get_glove_tfidf_emb(validset, tfidf[6300:7000])
+    test_doc_emb = preprocessor.get_glove_tfidf_emb(testset, tfidf[7000:])
 
-    train_data = BertDataset(train, tfidf[:6300], args.max_len)
-    valid_data = BertDataset(train, tfidf[6300:7000], args.max_len)
-    test_data = BertDataset(train, tfidf[7000:], args.max_len)
+    print('[INFO] Make bert dataset...')
+    train_data = BertDataset(train, train_doc_emb, args.max_len)
+    valid_data = BertDataset(valid, valid_doc_emb, args.max_len)
+    test_data = BertDataset(test, test_doc_emb, args.max_len)
 
     print('[INFO] Save pickles...')
     data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
@@ -88,7 +101,7 @@ def train(args):
         valid_data = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4, tfidf_len=args.max_len)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4)
     model.to(device)
 
     trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip)
