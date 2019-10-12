@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--cuda', default=-1, type=int)
     parser.add_argument('--checkpoint', default=-1, type=int)
+    parser.add_argument('--fz', default=-1, type=int, help='freeze bert epoch')
     args = parser.parse_args()
 
     if args.do_data:
@@ -105,7 +106,7 @@ def train(args):
     model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=3, output_hidden_states=True)
     model.to(device)
 
-    trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip)
+    trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip, args.fz)
 
     for epoch in range(args.epochs):
         print('Epoch: {}'.format(epoch))

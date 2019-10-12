@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 
 
 class Trainer:
-    def __init__(self, device, model, batch_size, lr, gradient_accumulation_steps=1, grad_clip=0.0):
+    def __init__(self, device, model, batch_size, lr, gradient_accumulation_steps=1, grad_clip=0.0, freeze_epoch=-1):
         self.device = device
         self.model = model
         self.batch_size = batch_size
@@ -18,9 +18,13 @@ class Trainer:
         self.criteria = torch.nn.BCEWithLogitsLoss()
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.grad_clip = grad_clip
+        self.freeze_epoch = freeze_epoch
         self.history = {'train': [], 'valid': []}
 
     def run_epoch(self, epoch, data, training):
+        if epoch == self.freeze_epoch:
+            self.model.freeze_bert_encoder()
+
         self.model.train(training)
         if training:
             description = 'Train'
