@@ -20,9 +20,11 @@ class Preprocessor:
             Return:
                 outputs (onehot list): sentence's onehot label.
         """
-        label_dict = {'THEORETICAL': 0, 'ENGINEERING': 1, 'EMPIRICAL': 2, 'OTHERS': 3}
-        onehot = [0, 0, 0, 0]
+        label_dict = {'THEORETICAL': 0, 'ENGINEERING': 1, 'EMPIRICAL': 2}
+        onehot = [0, 0, 0]
         for l in labels.split():
+            if l == "OTHERS":
+                continue
             onehot[label_dict[l]] = 1
         return onehot
 

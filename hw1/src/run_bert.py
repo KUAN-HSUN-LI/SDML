@@ -102,7 +102,7 @@ def train(args):
         valid_data = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4, output_hidden_states=True)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=3, output_hidden_states=True)
     model.to(device)
 
     trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip)
@@ -126,7 +126,7 @@ def predict(args):
         testData = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=3)
     model.load_state_dict(torch.load('../model/%s/model.pkl.%d' % (args.dir_name, args.checkpoint)))
     model.train(False)
     model.to(device)

@@ -16,9 +16,18 @@ class F1:
 
     def update(self, predicts, groundTruth):
         predicts = predicts > self.threshold
+        predicts = predicts.type(torch.float32)
+        predicts = self.add_labels(predicts)
+        groundTruth = self.add_labels(groundTruth)
         self.n_precision += torch.sum(predicts).data.item()
         self.n_recall += torch.sum(groundTruth).data.item()
-        self.n_corrects += torch.sum(groundTruth.type(torch.bool) * predicts).data.item()
+        self.n_corrects += torch.sum(groundTruth * predicts).data.item()
+
+    def add_labels(self, labels):
+        new_axis = []
+        for label in labels:
+            new_axis.append([1]) if torch.sum(label) == 0 else new_axis.append([0])
+        return torch.cat((labels, torch.Tensor(new_axis)), 1)
 
     def get_score(self):
         recall = self.n_corrects / self.n_recall
