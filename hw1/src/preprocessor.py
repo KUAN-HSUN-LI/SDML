@@ -133,8 +133,8 @@ class Preprocessor:
                     word_emb *= tfidf[data_num][word_num]      # (tensor[300])
                     abstract_emb += word_emb
                     word_num += 1
-            abstract_emb /= word_num
-            abstract_emb *= 10
+            # abstract_emb /= word_num
+            # abstract_emb *= 10
             abstract_embs = torch.cat((abstract_embs, abstract_emb.unsqueeze(0)))
             data_num += 1
 

@@ -14,7 +14,7 @@ class Trainer:
         self.model = model
         self.batch_size = batch_size
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=lr, eps=1e-8)
-        self.scheduler = StepLR(self.opt, step_size=2, gamma=0.5)
+        self.scheduler = StepLR(self.opt, step_size=10, gamma=0.5)
         self.criteria = torch.nn.BCEWithLogitsLoss()
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.grad_clip = grad_clip
@@ -68,7 +68,7 @@ class Trainer:
         masks = masks.to(self.device)
         doc_embs = doc_embs.to(self.device)
         labels = labels.to(self.device)
-        outputs = self.model(tokens, doc_embs, token_type_ids=segments, attention_mask=masks)
+        outputs = self.model(tokens, doc_embs, self.device, token_type_ids=segments, attention_mask=masks)
         l_loss = self.criteria(outputs, labels)
         return outputs, l_loss
 

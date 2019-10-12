@@ -9,6 +9,7 @@ import ipdb
 from embedding import Embedding
 from utils import collect_words
 
+
 def main():
     parser = ArgumentParser()
     parser.add_argument('--dir_name', type=str, required=True)
@@ -17,8 +18,8 @@ def main():
     parser.add_argument("--do_test", action='store_true')
     parser.add_argument('--model', default='bert-base-uncased', type=str, help='pretrained_model_name')
     parser.add_argument('--max_len', type=int, required=True)
-    parser.add_argument('--epochs', default=6, type=int)
-    parser.add_argument('--batch_size', default=8, type=int)
+    parser.add_argument('--epochs', default=4, type=int)
+    parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--accum', default=1, type=int, help='gradient_accumulation_steps')
     parser.add_argument("--grad_clip", default=1.0, type=float)
     parser.add_argument('--lr', default=1e-5, type=float)
@@ -101,7 +102,7 @@ def train(args):
         valid_data = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4)
+    model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=4, output_hidden_states=True)
     model.to(device)
 
     trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip)

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel, BertPreTrainedModel
+import ipdb
 
 
 class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
@@ -19,15 +20,20 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
 
         self.init_weights()
 
-    def forward(self, input_ids, doc_embs, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, doc_embs, device, token_type_ids=None, attention_mask=None,
                 position_ids=None, head_mask=None, labels=None):
 
         outputs = self.bert(input_ids,
                             token_type_ids=token_type_ids,
                             attention_mask=attention_mask,
-                            position_ids=None, head_mask=None)[1]
-        outputs = self.dropout(outputs)
-        logits = self.classifier(torch.cat((outputs, doc_embs), 1))
+                            position_ids=None, head_mask=None)[2]
+
+        mean_outputs = torch.Tensor().to(device)
+        for layer in range(len(outputs)):
+            mean_outputs = torch.cat((mean_outputs, torch.sum(outputs[layer], 1)), 0)  # (1, words, 1024)>(1, 1024)
+        mean_outputs = torch.mean(mean_outputs, 0).unsqueeze(0)
+
+        logits = self.classifier(torch.cat((self.dropout(mean_outputs), doc_embs), 1))
 
         return logits
 
