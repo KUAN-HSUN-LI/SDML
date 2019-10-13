@@ -5,8 +5,11 @@ import torch
 class BertDataset(Dataset):
     def __init__(self, data, doc_emb, max_len):
         self.data = data
-        self.doc_emb = doc_emb
         self.max_len = max_len
+        if doc_emb is None:
+            self.doc_emb = torch.zeros(len(data), 300)
+        else:
+            self.doc_emb = doc_emb
 
     def __len__(self):
         return len(self.data)

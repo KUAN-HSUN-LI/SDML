@@ -40,7 +40,6 @@ class Preprocessor:
     def get_dataset(self, dataset, n_workers=4):
 
         results = [None] * n_workers
-        tfidf_results = [None] * n_workers
         with Pool(processes=n_workers) as pool:
             for i in range(n_workers):
                 batch_start = (len(dataset) // n_workers) * i
@@ -51,7 +50,6 @@ class Preprocessor:
 
                 batch = dataset[batch_start: batch_end]
                 results[i] = pool.apply_async(self.preprocess_samples, [batch])
-                tfidf_results[i] = pool.apply_async(self.preprocess_tfidf_samples, [batch])
 
             pool.close()
             pool.join()
@@ -59,14 +57,30 @@ class Preprocessor:
         processed = []
         for result in results:
             processed += result.get()
+
+        return processed
+
+    def get_tfidf(self, dataset, n_workers=4):
+        tfidf_results = [None] * n_workers
+        with Pool(processes=n_workers) as pool:
+            for i in range(n_workers):
+                batch_start = (len(dataset) // n_workers) * i
+                if i == n_workers - 1:
+                    batch_end = len(dataset)
+                else:
+                    batch_end = (len(dataset) // n_workers) * (i + 1)
+
+                batch = dataset[batch_start: batch_end]
+                tfidf_results[i] = pool.apply_async(self.preprocess_tfidf_samples, [batch])
+
+            pool.close()
+            pool.join()
+
         tfidf_processed = []
         for tfidf_result in tfidf_results:
             tfidf_processed += tfidf_result.get()
 
-        # processed = self.preprocess_samples(dataset)
-        # tfidf_processed = self.preprocess_tfidf_samples(dataset)
-
-        return processed, tfidf_processed
+        return tfidf_processed
 
     def preprocess_samples(self, dataset):
         """ Worker function.
