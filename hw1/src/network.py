@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel, BertPreTrainedModel
+import ipdb
 
 
 class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
@@ -19,13 +20,14 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
 
         self.init_weights()
 
-    def forward(self, input_ids, node_vec, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, node_vec, tfidf, token_type_ids=None, attention_mask=None,
                 position_ids=None, head_mask=None, labels=None):
 
         outputs = self.bert(input_ids,
                             token_type_ids=token_type_ids,
                             attention_mask=attention_mask,
-                            position_ids=None, head_mask=None)[1]
+                            position_ids=None, head_mask=None)[0]
+        outputs = torch.sum(outputs * tfidf.unsqueeze(2), 1)
         outputs = torch.cat((outputs, node_vec), 1)
 
         outputs = self.dropout(outputs)

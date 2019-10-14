@@ -39,8 +39,8 @@ class Trainer:
         trange = tqdm(enumerate(dataloader), total=len(dataloader), desc=description)
         loss = 0
         f1_score = F1()
-        for step, (tokens, segments, masks, node_vec, labels) in trange:
-            o_labels, batch_loss = self._run_iter(tokens, segments, masks, node_vec, labels)
+        for step, (tokens, segments, masks, node_vec, tfidf, labels) in trange:
+            o_labels, batch_loss = self._run_iter(tokens, segments, masks, node_vec, tfidf, labels)
             if training:
                 if self.gradient_accumulation_steps > 1:
                     batch_loss = batch_loss / self.gradient_accumulation_steps
@@ -62,13 +62,14 @@ class Trainer:
 
         self.scheduler.step()
 
-    def _run_iter(self, tokens, segments, masks, node_vec, labels):
+    def _run_iter(self, tokens, segments, masks, node_vec, tfidf, labels):
         tokens = tokens.to(self.device)
         segments = segments.to(self.device)
         masks = masks.to(self.device)
         labels = labels.to(self.device)
         node_vec = node_vec.to(self.device)
-        outputs = self.model(tokens, node_vec, token_type_ids=segments, attention_mask=masks)
+        tfidf = tfidf.to(self.device)
+        outputs = self.model(tokens, node_vec, tfidf, token_type_ids=segments, attention_mask=masks)
         l_loss = self.criteria(outputs, labels)
         return outputs, l_loss
 

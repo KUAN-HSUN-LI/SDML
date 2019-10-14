@@ -4,6 +4,9 @@ import pickle
 import os
 from argparse import ArgumentParser
 from utils import load_pkl
+from tfidf import get_tfidf
+from dataset import BertDataset
+import ipdb
 
 
 def main():
@@ -13,7 +16,7 @@ def main():
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_test", action='store_true')
     parser.add_argument('--model', default='bert-base-uncased', type=str, help='pretrained_model_name')
-    parser.add_argument('--max_len', type=int, required=True)
+    parser.add_argument('--max_len', default=256, type=int)
     parser.add_argument('--epochs', default=6, type=int)
     parser.add_argument('--batch_size', default=8, type=int)
     parser.add_argument('--accum', default=1, type=int, help='gradient_accumulation_steps')
@@ -25,7 +28,7 @@ def main():
     args = parser.parse_args()
 
     global data_name
-    data_name = '%s_%d_%s' % (args.model.split('-', 1)[1], args.max_len, 'nodeVec')
+    data_name = '%s_%d_nodeVec_tfidf' % (args.model.split('-', 1)[1], args.max_len)
     if args.do_data:
         preprocess(args)
 
@@ -60,11 +63,19 @@ def preprocess(args):
     test_node_vec = load_pkl('../data/node_vec_test.pkl')
     test_node_vec = test_node_vec.type(torch.FloatTensor)
 
-    print('[INFO] Get dataset')
+    print('[INFO] Make bert dataset...')
     preprocessor = Preprocessor(args.model)
-    train_data = preprocessor.get_dataset(trainset, train_node_vec, args.max_len, n_workers=12)
-    valid_data = preprocessor.get_dataset(validset, valid_node_vec, args.max_len, n_workers=12)
-    test_data = preprocessor.get_dataset(testset, test_node_vec, args.max_len, n_workers=12)
+    train_data = preprocessor.get_dataset(trainset, n_workers=12)
+    valid_data = preprocessor.get_dataset(validset, n_workers=12)
+    test_data = preprocessor.get_dataset(testset, n_workers=12)
+
+    tfidf = get_tfidf([data['tokens'] for data in train_data] +
+                      [data['tokens'] for data in valid_data] +
+                      [data['tokens'] for data in test_data])
+
+    train_data = BertDataset(train_data, train_node_vec, tfidf[:6300], args.max_len)
+    valid_data = BertDataset(valid_data, valid_node_vec, tfidf[6300:7000], args.max_len)
+    test_data = BertDataset(test_data, test_node_vec, tfidf[7000:], args.max_len)
 
     print('[INFO] Save pickles...')
     if not os.path.exists('../dataset/'):

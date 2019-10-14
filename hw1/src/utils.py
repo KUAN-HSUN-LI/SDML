@@ -62,6 +62,7 @@ def SubmitGenerator(prediction, sampleFile, public=True, filename='prediction.cs
     df = pd.DataFrame.from_dict(submit)
     df.to_csv(filename, index=False)
 
+
 def load_pkl(pkl_path):
     import pickle
     with open(pkl_path, mode='rb') as f:

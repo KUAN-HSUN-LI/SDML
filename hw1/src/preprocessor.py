@@ -4,8 +4,6 @@ from transformers import BertTokenizer
 from tqdm import tqdm
 import ipdb
 
-from dataset import BertDataset
-
 
 class Preprocessor:
 
@@ -34,7 +32,7 @@ class Preprocessor:
         """
         return [self.tokenizer.convert_tokens_to_ids(word) for word in self.tokenizer.tokenize(sentence)]
 
-    def get_dataset(self, dataset, nodevec, max_len, n_workers=4):
+    def get_dataset(self, dataset, n_workers=4):
 
         results = [None] * n_workers
         with Pool(processes=n_workers) as pool:
@@ -54,7 +52,7 @@ class Preprocessor:
         processed = []
         for result in results:
             processed += result.get()
-        return BertDataset(processed, nodevec, max_len)
+        return processed
 
     def preprocess_samples(self, dataset):
         """ Worker function.
