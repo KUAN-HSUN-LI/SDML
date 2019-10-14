@@ -61,3 +61,10 @@ def SubmitGenerator(prediction, sampleFile, public=True, filename='prediction.cs
         submit['OTHERS'] = [0]*redundant + list(prediction[:, 3])
     df = pd.DataFrame.from_dict(submit)
     df.to_csv(filename, index=False)
+
+def load_pkl(pkl_path):
+    import pickle
+    with open(pkl_path, mode='rb') as f:
+        obj = pickle.load(f)
+
+    return obj

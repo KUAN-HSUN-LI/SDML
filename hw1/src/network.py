@@ -15,22 +15,21 @@ class BertForMultiLabelSequenceClassification(BertPreTrainedModel):
 
         self.bert = BertModel(config)
         self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = torch.nn.Linear(config.hidden_size, config.num_labels)
+        self.classifier = torch.nn.Linear(config.hidden_size + 128, config.num_labels)
 
         self.init_weights()
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None,
+    def forward(self, input_ids, node_vec, token_type_ids=None, attention_mask=None,
                 position_ids=None, head_mask=None, labels=None):
 
         outputs = self.bert(input_ids,
                             token_type_ids=token_type_ids,
                             attention_mask=attention_mask,
-                            position_ids=None, head_mask=None)
+                            position_ids=None, head_mask=None)[1]
+        outputs = torch.cat((outputs, node_vec), 1)
 
-        pooled_output = outputs[1]
-
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        outputs = self.dropout(outputs)
+        logits = self.classifier(outputs)
 
         return logits
 

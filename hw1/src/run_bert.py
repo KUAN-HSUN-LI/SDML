@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 import os
 from argparse import ArgumentParser
+from utils import load_pkl
 
 
 def main():
@@ -20,13 +21,15 @@ def main():
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--cuda', default=-1, type=int)
     parser.add_argument('--checkpoint', default=-1, type=int)
+    parser.add_argument('--fz', default=-1, type=int)
     args = parser.parse_args()
 
+    global data_name
+    data_name = '%s_%d_%s' % (args.model.split('-', 1)[1], args.max_len, 'nodeVec')
     if args.do_data:
         preprocess(args)
 
     if args.do_train:
-        data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
         if not os.path.exists('../dataset/trainData_%s.pkl' % data_name):
             preprocess(args)
         train(args)
@@ -49,16 +52,21 @@ def preprocess(args):
     testset = pd.read_csv('../data/task2_public_testset.csv', dtype=str)
     testset = remove_info(testset)
 
-    print('[Info] Collect words and make word dictionary...')
-    preprocessor = Preprocessor(args.model)
+    print('[Info] Loading node vectors...')
+    train_node_vec = load_pkl('../data/node_vec.pkl')     # torch([7000, 128]
+    train_node_vec, valid_node_vec = train_test_split(train_node_vec.numpy(), test_size=0.1, random_state=42)
+    train_node_vec = torch.FloatTensor(train_node_vec)
+    valid_node_vec = torch.FloatTensor(valid_node_vec)
+    test_node_vec = load_pkl('../data/node_vec_test.pkl')
+    test_node_vec = test_node_vec.type(torch.FloatTensor)
 
-    print('[INFO] Make dataset...')
-    train_data = preprocessor.get_dataset(trainset, args.max_len, n_workers=4)
-    valid_data = preprocessor.get_dataset(validset, args.max_len, n_workers=4)
-    test_data = preprocessor.get_dataset(testset, args.max_len, n_workers=4)
+    print('[INFO] Get dataset')
+    preprocessor = Preprocessor(args.model)
+    train_data = preprocessor.get_dataset(trainset, train_node_vec, args.max_len, n_workers=12)
+    valid_data = preprocessor.get_dataset(validset, valid_node_vec, args.max_len, n_workers=12)
+    test_data = preprocessor.get_dataset(testset, test_node_vec, args.max_len, n_workers=12)
 
     print('[INFO] Save pickles...')
-    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
     if not os.path.exists('../dataset/'):
         os.makedirs('../dataset/')
     with open('../dataset/trainData_%s.pkl' % data_name, 'wb') as f:
@@ -74,7 +82,6 @@ def train(args):
     from network import BertForMultiLabelSequenceClassification
     from utils import plot
 
-    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
     with open('../dataset/trainData_%s.pkl' % data_name, 'rb') as f:
         train_data = pickle.load(f)
     with open('../dataset/validData_%s.pkl' % data_name, 'rb') as f:
@@ -100,7 +107,6 @@ def predict(args):
     from network import BertForMultiLabelSequenceClassification
     from utils import SubmitGenerator
 
-    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
     with open('../dataset/testData_%s.pkl' % data_name, 'rb') as f:
         testData = pickle.load(f)
 
@@ -117,9 +123,9 @@ def predict(args):
                             num_workers=1)
     trange = tqdm(enumerate(dataloader), total=len(dataloader), desc='Predict')
     prediction = []
-    for i, (tokens, segments, masks, labels) in trange:
+    for i, (tokens, segments, masks, outputs, labels) in trange:
         with torch.no_grad():
-            o_labels = model(tokens.to(device), segments.to(device), masks.to(device))
+            o_labels = model(tokens.to(device), outputs.to(device), segments.to(device), masks.to(device))
             o_labels = o_labels > 0.0
             prediction.append(o_labels.to('cpu'))
 
