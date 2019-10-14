@@ -3,11 +3,10 @@ import pandas as pd
 import pickle
 import os
 from argparse import ArgumentParser
+from utils import load_pkl
 from tfidf import get_tfidf
 from dataset import BertDataset
 import ipdb
-from embedding import Embedding
-from utils import collect_words
 
 
 def main():
@@ -16,7 +15,7 @@ def main():
     parser.add_argument("--do_data", action='store_true')
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_test", action='store_true')
-    parser.add_argument('--model', default='bert-large-uncased', type=str, help='pretrained_model_name')
+    parser.add_argument('--model', default='bert-base-uncased', type=str, help='pretrained_model_name')
     parser.add_argument('--max_len', default=256, type=int)
     parser.add_argument('--epochs', default=6, type=int)
     parser.add_argument('--batch_size', default=1, type=int)
@@ -25,14 +24,13 @@ def main():
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--cuda', default=-1, type=int)
     parser.add_argument('--checkpoint', default=-1, type=int)
-    parser.add_argument('--fz', default=-1, type=int, help='freeze bert epoch')
-    parser.add_argument('--tfidf', action='store_true')
+    parser.add_argument('--fz', default=-1, type=int)
+    parser.add_argument('--lr_step', default=10, type=int, help='learning rate scheduler step size')
+    parser.add_argument('--gamma', default=0.5, type=float, help='learning rate scheduler gamma')
     args = parser.parse_args()
 
-    data_name = '%s_%d' % (args.model.split('-', 1)[1], args.max_len)
-    if args.tfidf:
-        data_name += '_tfidf'
-
+    global data_name
+    data_name = '%s_%d_nodeVec_tfidf' % (args.model.split('-', 1)[1], args.max_len)
     if args.do_data:
         preprocess(args, data_name)
 
@@ -59,40 +57,27 @@ def preprocess(args, data_name):
     testset = pd.read_csv('../data/task2_public_testset.csv', dtype=str)
     testset = remove_info(testset)
 
-    preprocessor = Preprocessor(args.model, None)
+    print('[Info] Loading node vectors...')
+    train_node_vec = load_pkl('../data/node_vec.pkl')     # torch([7000, 128]
+    train_node_vec, valid_node_vec = train_test_split(train_node_vec.numpy(), test_size=0.1, random_state=42)
+    train_node_vec = torch.FloatTensor(train_node_vec)
+    valid_node_vec = torch.FloatTensor(valid_node_vec)
+    test_node_vec = load_pkl('../data/node_vec_test.pkl')
+    test_node_vec = test_node_vec.type(torch.FloatTensor)
 
-    print('[INFO] Get data')
-    train = preprocessor.get_dataset(trainset, n_workers=12)
-    valid = preprocessor.get_dataset(validset, n_workers=12)
-    test = preprocessor.get_dataset(testset, n_workers=12)
+    print('[INFO] Make bert dataset...')
+    preprocessor = Preprocessor(args.model)
+    train_data = preprocessor.get_dataset(trainset, n_workers=12)
+    valid_data = preprocessor.get_dataset(validset, n_workers=12)
+    test_data = preprocessor.get_dataset(testset, n_workers=12)
 
-    if args.tfidf:
-        print('[Info] Collect words and make embedding...')
-        words = set()
-        words |= collect_words(trainset)
-        words |= collect_words(validset)
-        words |= collect_words(testset)
-        embedding = Embedding('../data/glove.6B.300d.txt', words)
-        preprocessor.embedding = embedding
+    tfidf = get_tfidf([data['tokens'] for data in train_data] +
+                      [data['tokens'] for data in valid_data] +
+                      [data['tokens'] for data in test_data])
 
-        train_tfidf = preprocessor.get_tfidf(trainset, n_workers=12)
-        valid_tfidf = preprocessor.get_tfidf(validset, n_workers=12)
-        test_tfidf = preprocessor.get_tfidf(testset, n_workers=12)
-
-        print('[INFO] Make abstract tfidf document embedding...')
-        tfidf = get_tfidf(train_tfidf + valid_tfidf + test_tfidf)
-        train_doc_emb = preprocessor.get_glove_tfidf_emb(trainset, tfidf[:6300])
-        valid_doc_emb = preprocessor.get_glove_tfidf_emb(validset, tfidf[6300:7000])
-        test_doc_emb = preprocessor.get_glove_tfidf_emb(testset, tfidf[7000:])
-
-        print('[INFO] Make bert dataset...')
-        train_data = BertDataset(train, train_doc_emb, args.max_len)
-        valid_data = BertDataset(valid, valid_doc_emb, args.max_len)
-        test_data = BertDataset(test, test_doc_emb, args.max_len)
-    else:
-        train_data = BertDataset(train, None, args.max_len)
-        valid_data = BertDataset(valid, None, args.max_len)
-        test_data = BertDataset(test, None, args.max_len)
+    train_data = BertDataset(train_data, train_node_vec, tfidf[:6300], args.max_len)
+    valid_data = BertDataset(valid_data, valid_node_vec, tfidf[6300:7000], args.max_len)
+    test_data = BertDataset(test_data, test_node_vec, tfidf[7000:], args.max_len)
 
     print('[INFO] Save pickles...')
     if not os.path.exists('../dataset/'):
@@ -116,11 +101,11 @@ def train(args, data_name):
         valid_data = pickle.load(f)
 
     device = torch.device('cuda:%d' % args.cuda if torch.cuda.is_available() else 'cpu')
-    # model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=3, output_hidden_states=True)
     model = BertForMultiLabelSequenceClassification.from_pretrained(args.model, num_labels=3)
     model.to(device)
 
-    trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip, args.fz)
+    trainer = Trainer(device, model, args.batch_size, args.lr, args.accum, args.grad_clip, args.fz,
+                      args.lr_step, args.gamma)
 
     for epoch in range(args.epochs):
         print('Epoch: {}'.format(epoch))
@@ -152,9 +137,10 @@ def predict(args, data_name):
                             num_workers=1)
     trange = tqdm(enumerate(dataloader), total=len(dataloader), desc='Predict')
     prediction = []
-    for i, (tokens, segments, masks, doc_embs, labels) in trange:
+    for i, (tokens, segments, masks, node_vec, tfidf, labels) in trange:
         with torch.no_grad():
-            o_labels = model(tokens.to(device), doc_embs.to(device), device, segments.to(device), masks.to(device))
+            o_labels = model(tokens.to(device), node_vec.to(device), tfidf.to(device),
+                             segments.to(device), masks.to(device))
             o_labels = o_labels > 0.0
             prediction.append(o_labels.to('cpu'))
 

@@ -9,12 +9,13 @@ from torch.optim.lr_scheduler import StepLR
 
 
 class Trainer:
-    def __init__(self, device, model, batch_size, lr, gradient_accumulation_steps=1, grad_clip=0.0, freeze_epoch=-1):
+    def __init__(self, device, model, batch_size, lr, gradient_accumulation_steps=1, grad_clip=0.0,
+                 freeze_epoch=-1, lr_step=10, gamma=0.5):
         self.device = device
         self.model = model
         self.batch_size = batch_size
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=lr, eps=1e-8)
-        self.scheduler = StepLR(self.opt, step_size=2, gamma=0.5)
+        self.scheduler = StepLR(self.opt, step_size=lr_step, gamma=gamma)
         self.criteria = torch.nn.BCEWithLogitsLoss()
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.grad_clip = grad_clip
@@ -43,8 +44,8 @@ class Trainer:
         trange = tqdm(enumerate(dataloader), total=len(dataloader), desc=description)
         loss = 0
         f1_score = F1()
-        for step, (tokens, segments, masks, doc_embs, labels) in trange:
-            o_labels, batch_loss = self._run_iter(tokens, segments, masks, doc_embs, labels)
+        for step, (tokens, segments, masks, node_vec, tfidf, labels) in trange:
+            o_labels, batch_loss = self._run_iter(tokens, segments, masks, node_vec, tfidf, labels)
             if training:
                 if self.gradient_accumulation_steps > 1:
                     batch_loss = batch_loss / self.gradient_accumulation_steps
@@ -66,13 +67,14 @@ class Trainer:
 
         self.scheduler.step()
 
-    def _run_iter(self, tokens, segments, masks, doc_embs, labels):
+    def _run_iter(self, tokens, segments, masks, node_vec, tfidf, labels):
         tokens = tokens.to(self.device)
         segments = segments.to(self.device)
         masks = masks.to(self.device)
-        doc_embs = doc_embs.to(self.device)
         labels = labels.to(self.device)
-        outputs = self.model(tokens, doc_embs, self.device, token_type_ids=segments, attention_mask=masks)
+        node_vec = node_vec.to(self.device)
+        tfidf = tfidf.to(self.device)
+        outputs = self.model(tokens, node_vec, tfidf, token_type_ids=segments, attention_mask=masks)
         l_loss = self.criteria(outputs, labels)
         return outputs, l_loss
 

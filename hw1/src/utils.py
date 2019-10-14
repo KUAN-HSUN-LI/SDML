@@ -43,40 +43,32 @@ def SubmitGenerator(prediction, sampleFile, public=True, filename='prediction.cs
         public (boolean)
         filename (str)
     """
-    import pandas as pd
-
     sample = pd.read_csv(sampleFile)
     submit = dict()
     submit['order_id'] = list(sample.order_id.values)
     redundant = len(sample) - prediction.shape[0]
+
+    others = []
+    for p in prediction:
+        others.append(1 if sum(p) == 0 else 0)
     if public:
-        submit['THEORETICAL'] = list(prediction[:, 0]) + [0]*redundant
-        submit['ENGINEERING'] = list(prediction[:, 1]) + [0]*redundant
-        submit['EMPIRICAL'] = list(prediction[:, 2]) + [0]*redundant
-        submit['OTHERS'] = list(prediction[:, 3]) + [0]*redundant
+        submit['THEORETICAL'] = list(prediction[:, 0]) + [0] * redundant
+        submit['ENGINEERING'] = list(prediction[:, 1]) + [0] * redundant
+        submit['EMPIRICAL'] = list(prediction[:, 2]) + [0] * redundant
+        #         submit['OTHERS'] = list(prediction[:,3]) + [0]*redundant
+        submit['OTHERS'] = others + [0] * redundant
     else:
-        submit['THEORETICAL'] = [0]*redundant + list(prediction[:, 0])
-        submit['ENGINEERING'] = [0]*redundant + list(prediction[:, 1])
-        submit['EMPIRICAL'] = [0]*redundant + list(prediction[:, 2])
-        submit['OTHERS'] = [0]*redundant + list(prediction[:, 3])
+        submit['THEORETICAL'] = [0] * redundant + list(prediction[:, 0])
+        submit['ENGINEERING'] = [0] * redundant + list(prediction[:, 1])
+        submit['EMPIRICAL'] = [0] * redundant + list(prediction[:, 2])
+        submit['OTHERS'] = [0] * redundant + list(prediction[:, 3])
     df = pd.DataFrame.from_dict(submit)
     df.to_csv(filename, index=False)
 
 
-def collect_words(df, n_workers=12):
-    from multiprocessing import Pool
-    from nltk.tokenize import word_tokenize
+def load_pkl(pkl_path):
+    import pickle
+    with open(pkl_path, mode='rb') as f:
+        obj = pickle.load(f)
 
-    sent_list = []
-    for i in df.iterrows():
-        sent_list += i[1]['Abstract'].split('$$$')
-
-    chunks = [
-        ' '.join(sent_list[i:i + len(sent_list) // n_workers])
-        for i in range(0, len(sent_list), len(sent_list) // n_workers)
-    ]
-    with Pool(n_workers) as pool:
-        chunks = pool.map_async(word_tokenize, chunks)
-        words = set(sum(chunks.get(), []))
-
-    return words
+    return obj
