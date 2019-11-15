@@ -29,4 +29,4 @@ if args.do_train:
              args.max_len, args.ncontrols, args.emb_dim, args.hid_dim, args.max_epoch, args.batch_size)
 
 if args.do_test:
-    do_test("../model1/model.pkl.0", "../data/test_data.pkl", "out.txt", "../data/dictionary.pkl", args.emb_dim, args.hid_dim)
+    do_test("../model1/model.pkl.9", "../data/test_data.pkl", "out.txt", "../data/dictionary.pkl", args.emb_dim, args.hid_dim)

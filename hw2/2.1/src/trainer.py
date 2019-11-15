@@ -100,9 +100,9 @@ def do_train(train_data_path, valid_data_path, word_dict_path, max_len, ncontrol
     scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.5)
     trainer = Trainer(model, device, trainData, validData, opt, criterion, scheduler, batch_size)
 
-    for epoch in range(1):
+    for epoch in range(max_epoch):
         print('Epoch: {}'.format(epoch))
-        # trainer.run_epoch(epoch, True)
-        # trainer.run_epoch(epoch, False)
-        # trainer.scheduler.step()
+        trainer.run_epoch(epoch, True)
+        trainer.run_epoch(epoch, False)
+        trainer.scheduler.step()
         trainer.save(epoch)
