@@ -37,7 +37,7 @@ class Trainer():
                                 batch_size=self.batch_size,
                                 shuffle=shuffle,
                                 collate_fn=dataset.collate_fn,
-                                num_workers=0)
+                                num_workers=4)
 
         trange = tqdm(enumerate(dataloader), total=len(dataloader), desc=description)
         loss = 0
@@ -52,6 +52,7 @@ class Trainer():
             loss += batch_loss.item()
             acc.update(output, y[:, 1:], random_num)
             trange.set_postfix(loss=loss / (i + 1), acc=acc.print_word_score())
+
         if training:
             self.history['train'].append({'acc': acc.get_word_score(), 'loss': loss / len(trange)})
         else:
