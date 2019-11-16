@@ -1,7 +1,5 @@
 import torch
 
-PAD_IDX = 0
-
 
 def load_pkl(pkl_path):
     import pickle
@@ -20,9 +18,8 @@ class accuracy():
         predictions = predictions.cpu()
         groundTruths = groundTruths.cpu()
         for i in range(len(groundTruths)):
-            length = int(torch.sum(groundTruths[i] != PAD_IDX))
-            prediction = predictions[i][:length]
-            groundTruth = groundTruths[i][:length]
+            prediction = predictions[i]
+            groundTruth = groundTruths[i]
             random_num = random_nums[i]
             self.ncontrol_word += len(random_num)
             for num in random_num:

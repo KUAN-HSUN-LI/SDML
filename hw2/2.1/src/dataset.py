@@ -24,8 +24,11 @@ class SentenceDataset(Dataset):
         if self.training:
             processed_data = []
             for data in datas:
-                self.process_data(data)
-                processed_data.append(data)
+                processed = {}
+                processed['x'] = data['x'].copy()
+                processed['y'] = data['y']
+                processed_data.append(self.process_data(processed))
+
             processed_data.sort(key=lambda x: len(x['x']), reverse=True)
             batch_data = [data['x'] for data in processed_data]
 
@@ -48,6 +51,7 @@ class SentenceDataset(Dataset):
     def process_data(self, data):
         data['random_num'] = self.get_ncontrols(len(data['y'])-2)
         data['x'] = self.add_control(data['x'], data['y'], data['random_num'])
+        return data
 
     def get_ncontrols(self, sent_len):
         sample_num = random.randint(1, self.ncontrols)
