@@ -11,7 +11,7 @@ def preprocess(path, max_len=25, training=True):
             if training:
                 dataset.append(['<SOS>'] + [word for word in line[:max_len]] + ['<EOS>'])
             else:
-                dataset.append([word for word in line])
+                dataset.append(line.split(' '))
     return dataset
 
 
@@ -49,7 +49,7 @@ def make_word_dict(dataset, max_len):
 def do_data(train_data_path, test_data_path, valid_split_rate, max_len):
     print("preprocessing data...")
     dataset = preprocess(train_data_path, max_len)
-    testDataset = preprocess(test_data_path)
+    testDataset = preprocess(test_data_path, training=False)
     print("making dictionary...")
     word_dict = make_word_dict(dataset, max_len)
     print("split and save...")

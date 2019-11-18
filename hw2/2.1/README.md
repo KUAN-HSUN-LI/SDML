@@ -1,2 +1,3 @@
 - `cd src`
-- `python3 main.py --train_data ../data/hw2.1_corpus.txt --test_data ../data/hw2.1-2_testing_data.txt --do_data --do_train --do_test`
+- `python3 main.py --train_data ../data/hw2.1_corpus.txt --test_data ../data/hw2.1-2_testing_data.txt --do_data --do_train`
+- `python3 hw2.1_evaluate.py --training_file [...] --result_file [...]`
